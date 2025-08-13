@@ -1,0 +1,24 @@
+# Database configuration for TimescaleDB connection
+
+database:
+  host: localhost
+  port: 5432
+  database: datakwip
+  user: demo
+  password: demo123
+  
+# Organization settings
+organization:
+  name: "Demo Building Corp"
+  key: "demo"
+  
+# Table settings
+tables:
+  value_table: "values_demo"
+  current_table: "values_demo_current"
+  
+# TimescaleDB settings
+timescale:
+  enable_hypertables: true
+  chunk_time_interval: "1 day"
+  compression_after: "7 days"

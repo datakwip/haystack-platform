@@ -1,0 +1,137 @@
+# Building configuration for data generation
+
+# Site information
+site:
+  id: "site-downtown-tower"
+  name: "Downtown Office Tower"
+  area: 150000  # sq ft
+  area_unit: "ft²"
+  address: "123 Business St, Metro City, State 12345"
+  timezone: "America/New_York"
+  year_built: 2018
+  primary_function: "office"
+  occupancy_type: "commercial"
+  floors: 12
+  weather_station: "weather-metro-city"
+  
+# HVAC Equipment configuration
+equipment:
+  # Chillers
+  chillers:
+    count: 2
+    capacity: 400  # tons each
+    manufacturer: "Carrier"
+    model: "30XA0404"
+    
+  # Air Handling Units
+  ahus:
+    count: 4
+    floors_per_ahu: 3
+    manufacturer: "Trane"
+    model: "Voyager"
+    
+  # VAV Boxes
+  vav_boxes:
+    per_floor: 4
+    zones: ["North", "South", "East", "West"]
+    
+  # Utility Meters
+  meters:
+    electric:
+      id: "meter-main-electric"
+      name: "Main Electric Meter"
+    gas:
+      id: "meter-main-gas"
+      name: "Main Gas Meter"
+    water:
+      id: "meter-main-water"
+      name: "Main Water Meter"
+      
+# Data generation settings
+generation:
+  # Time range for historical data
+  days_history: 30
+  data_interval_minutes: 15  # 15-minute intervals
+  
+  # Data quality settings
+  good_data_percentage: 95
+  stale_data_percentage: 3
+  fault_data_percentage: 2
+  
+  # Sensor noise settings
+  temperature_noise_range: 1.5  # +/- degrees F
+  flow_noise_percentage: 2  # +/- percent
+  power_noise_percentage: 3  # +/- percent
+  
+# Operational schedules
+schedules:
+  # Weekday occupancy schedule (0-1 scale)
+  weekday:
+    "06:00": 0.05
+    "07:00": 0.15
+    "08:00": 0.60
+    "09:00": 0.85
+    "10:00": 0.85
+    "11:00": 0.85
+    "12:00": 0.70
+    "13:00": 0.85
+    "14:00": 0.85
+    "15:00": 0.85
+    "16:00": 0.85
+    "17:00": 0.70
+    "18:00": 0.20
+    "19:00": 0.05
+    "20:00": 0.02
+    "21:00": 0.02
+    "22:00": 0.02
+    "23:00": 0.02
+    
+  # Weekend occupancy schedule
+  weekend:
+    default: 0.05
+    
+# Temperature setpoints
+setpoints:
+  occupied:
+    cooling: 72  # degrees F
+    heating: 70  # degrees F
+  unoccupied:
+    cooling: 78  # degrees F
+    heating: 65  # degrees F
+    
+# Weather simulation settings
+weather:
+  # Seasonal temperature ranges (degrees F)
+  seasons:
+    winter:
+      min: 20
+      max: 45
+      typical: 35
+    spring:
+      min: 40
+      max: 70
+      typical: 55
+    summer:
+      min: 65
+      max: 95
+      typical: 80
+    fall:
+      min: 35
+      max: 65
+      typical: 50
+      
+# Equipment performance curves
+performance:
+  chiller:
+    # COP at different load ratios
+    cop_curve:
+      0.2: 0.3   # 20% load: 30% of max COP
+      0.4: 0.7   # 40% load: 70% of max COP
+      0.6: 0.95  # 60% load: 95% of max COP
+      0.8: 0.95  # 80% load: 95% of max COP
+      1.0: 0.9   # 100% load: 90% of max COP
+    base_cop: 6.2
+    
+  vav:
+    min_flow_ratio: 0.3  # Minimum flow as ratio of max
+    max_flow_cfm: 800    # Maximum airflow per VAV

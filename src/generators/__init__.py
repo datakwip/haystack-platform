@@ -1,0 +1,1 @@
+"""Data generators for building entities and time-series data."""
