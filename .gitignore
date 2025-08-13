@@ -1,0 +1,48 @@
+# VS Code settings (keep your local settings private)
+.vscode/settings.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+.env
+.venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Conda
+.conda/
+environment.yml.bak
+
+# Data files (customize for your Haystack work)
+*.csv
+*.xlsx
+*.json
+data/
+output/
+temp/
+*.db
+*.sqlite
+
+# Secrets and configuration
+.env
+config.ini
+secrets.json
+*.key
+*.pem
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Jupyter Notebook
+.ipynb_checkpoints
