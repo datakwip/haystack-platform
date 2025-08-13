@@ -70,9 +70,9 @@ def setup_database(db_config: Dict[str, Any]) -> tuple[DatabaseConnection, Schem
     # Test connection
     try:
         db.execute_query("SELECT 1")
-        console.print("[green]✓[/green] Database connection successful")
+        console.print("[green]OK[/green] Database connection successful")
     except Exception as e:
-        console.print(f"[red]✗[/red] Database connection failed: {e}")
+        console.print(f"[red]ERROR[/red] Database connection failed: {e}")
         raise
         
     # Setup schema
@@ -81,15 +81,15 @@ def setup_database(db_config: Dict[str, Any]) -> tuple[DatabaseConnection, Schem
         db_config['organization']['name'],
         db_config['organization']['key']
     )
-    console.print(f"[green]✓[/green] Organization setup complete (ID: {org_id})")
+    console.print(f"[green]OK[/green] Organization setup complete (ID: {org_id})")
     
     # Setup hypertables
     console.print("[yellow]Setting up TimescaleDB hypertables...[/yellow]")
     try:
         db.setup_hypertables()
-        console.print("[green]✓[/green] Hypertables configured")
+        console.print("[green]OK[/green] Hypertables configured")
     except Exception as e:
-        console.print(f"[yellow]![/yellow] Hypertable setup warning: {e}")
+        console.print(f"[yellow]WARNING[/yellow] Hypertable setup warning: {e}")
         
     # Create value tables
     schema.create_value_tables(db_config['organization']['key'])
@@ -112,17 +112,12 @@ def generate_building_entities(schema: SchemaSetup, building_config: Dict[str, A
     """
     console.print("[bold blue]Generating building entities...[/bold blue]")
     
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console
-    ) as progress:
-        task = progress.add_task("Creating entities...", total=None)
-        
-        entity_gen = EntityGenerator(schema, building_config)
-        entity_map = entity_gen.generate_all_entities()
-        
-        progress.update(task, description=f"Created {len(entity_map)} entities", completed=True)
+    console.print("Creating entities...")
+    
+    entity_gen = EntityGenerator(schema, building_config)
+    entity_map = entity_gen.generate_all_entities()
+    
+    console.print(f"Created {len(entity_map)} entities")
         
     # Display summary
     equipment_count = sum(1 for key in entity_map.keys() if key.startswith('equip-'))
@@ -159,30 +154,16 @@ def generate_historical_data(data_loader: DataLoader, building_config: Dict[str,
     weather_sim = WeatherSimulator(building_config['weather'])
     schedule_gen = ScheduleGenerator(building_config)
     
-    with Progress(
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        console=console
-    ) as progress:
+    # Generate data
+    console.print("Generating time-series data...")
+    historical_df = ts_gen.generate_historical_data(days)
+    
+    # Insert data in chunks
+    console.print("Inserting data into database...")
+    chunk_size = 10000
+    data_loader.insert_dataframe(historical_df, chunk_size)
         
-        # Generate data
-        data_task = progress.add_task("Generating time-series data...", total=100)
-        
-        historical_df = ts_gen.generate_historical_data(days)
-        progress.update(data_task, completed=50)
-        
-        # Insert data in chunks
-        chunk_size = 10000
-        total_chunks = len(historical_df) // chunk_size + 1
-        
-        insert_task = progress.add_task("Inserting data into database...", total=total_chunks)
-        
-        data_loader.insert_dataframe(historical_df, chunk_size)
-        progress.update(data_task, completed=100)
-        progress.update(insert_task, completed=total_chunks)
-        
-    console.print(f"[green]✓[/green] Generated {len(historical_df):,} historical data points")
+    console.print(f"[green]OK[/green] Generated {len(historical_df):,} historical data points")
 
 
 def generate_current_values(data_loader: DataLoader, building_config: Dict[str, Any], 
@@ -217,7 +198,7 @@ def generate_current_values(data_loader: DataLoader, building_config: Dict[str, 
     # Update current values table
     data_loader.update_current_values(current_data)
     
-    console.print(f"[green]✓[/green] Updated {len(current_data)} current values")
+    console.print(f"[green]OK[/green] Updated {len(current_data)} current values")
 
 
 def display_validation_results(db: DatabaseConnection) -> None:
@@ -257,11 +238,11 @@ def display_validation_results(db: DatabaseConnection) -> None:
         {
             "name": "Average Zone Temperatures",
             "query": """
-                SELECT AVG(value_n) as avg_temp 
+                SELECT AVG(v.value_n) as avg_temp 
                 FROM core.values_demo v
                 JOIN core.entity_tag et ON v.entity_id = et.entity_id
                 JOIN core.tag_def td ON et.tag_id = td.id
-                WHERE td.name = 'zoneTemp' AND v.ts > NOW() - INTERVAL '1 day'
+                WHERE td.name = 'temp' AND v.ts > NOW() - INTERVAL '1 day'
             """
         },
         {
@@ -287,11 +268,11 @@ def display_validation_results(db: DatabaseConnection) -> None:
             result = db.execute_query(sample['query'])
             if result:
                 value = list(result[0].values())[0]
-                console.print(f"[green]✓[/green] {sample['name']}: {value}")
+                console.print(f"[green]OK[/green] {sample['name']}: {value}")
             else:
-                console.print(f"[yellow]![/yellow] {sample['name']}: No data")
+                console.print(f"[yellow]WARNING[/yellow] {sample['name']}: No data")
         except Exception as e:
-            console.print(f"[red]✗[/red] {sample['name']}: {e}")
+            console.print(f"[red]ERROR[/red] {sample['name']}: {e}")
 
 
 def main():
@@ -307,6 +288,8 @@ def main():
                        help='Only generate entities, skip time-series data')
     parser.add_argument('--skip-validation', action='store_true',
                        help='Skip validation queries')
+    parser.add_argument('--reset', action='store_true',
+                       help='Reset all data before generating (ensures coherent dataset)')
     
     args = parser.parse_args()
     
@@ -320,6 +303,13 @@ def main():
         
         # Setup database
         db, schema, data_loader = setup_database(db_config)
+        
+        # Reset data if requested
+        if args.reset:
+            console.print("[bold yellow]RESETTING ALL DATA[/bold yellow]")
+            console.print("[yellow]This will delete all entities and time-series data![/yellow]")
+            db.reset_all_data()
+            console.print("[green]OK[/green] Data reset complete")
         
         # Generate entities
         entity_map = generate_building_entities(schema, building_config)
@@ -335,7 +325,7 @@ def main():
         if not args.skip_validation:
             display_validation_results(db)
         
-        console.print("\n[bold green]✓ Data generation completed successfully![/bold green]")
+        console.print("\n[bold green]SUCCESS: Data generation completed successfully![/bold green]")
         
         # Connection info
         console.print(f"\n[bold blue]Database Connection:[/bold blue]")

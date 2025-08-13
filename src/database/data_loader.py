@@ -61,6 +61,9 @@ class DataLoader:
             if col not in df.columns:
                 df[col] = default
                 
+        # Clean up data types and handle NaN values
+        df = self._clean_dataframe_types(df)
+                
         # Convert to tuples for batch insert
         columns = ['entity_id', 'ts', 'value_n', 'value_b', 'value_s', 
                   'value_ts', 'value_dict', 'status']
@@ -116,6 +119,9 @@ class DataLoader:
         for col, default in optional_cols.items():
             if col not in df.columns:
                 df[col] = default
+                
+        # Clean up data types and handle NaN values
+        df = self._clean_dataframe_types(df)
                 
         # Convert to tuples
         columns = ['entity_id', 'ts', 'value_n', 'value_b', 'value_s',
@@ -192,6 +198,47 @@ class DataLoader:
         if result and result[0]['max_ts']:
             return result[0]['max_ts']
         return None
+        
+    def _clean_dataframe_types(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Clean and convert DataFrame data types for database insertion.
+        
+        Args:
+            df: DataFrame to clean
+            
+        Returns:
+            Cleaned DataFrame
+        """
+        df = df.copy()
+        
+        # Handle boolean column - convert NaN to None
+        if 'value_b' in df.columns:
+            df['value_b'] = df['value_b'].where(pd.notna(df['value_b']), None)
+            # Ensure boolean values are proper Python bool or None
+            df['value_b'] = df['value_b'].apply(lambda x: bool(x) if x is not None and not pd.isna(x) else None)
+        
+        # Handle numeric column - convert NaN to None  
+        if 'value_n' in df.columns:
+            df['value_n'] = df['value_n'].where(pd.notna(df['value_n']), None)
+            # Ensure numeric values are proper Python float or None
+            df['value_n'] = df['value_n'].apply(lambda x: float(x) if x is not None and not pd.isna(x) else None)
+            
+        # Handle string column - convert NaN to None
+        if 'value_s' in df.columns:
+            df['value_s'] = df['value_s'].where(pd.notna(df['value_s']), None)
+            
+        # Handle timestamp column - convert NaN to None
+        if 'value_ts' in df.columns:
+            df['value_ts'] = df['value_ts'].where(pd.notna(df['value_ts']), None)
+            
+        # Handle dict column - convert NaN to None
+        if 'value_dict' in df.columns:
+            df['value_dict'] = df['value_dict'].where(pd.notna(df['value_dict']), None)
+            
+        # Ensure status is always a string
+        if 'status' in df.columns:
+            df['status'] = df['status'].fillna('ok').astype(str)
+            
+        return df
         
     def delete_old_data(self, days_to_keep: int = 30):
         """Delete data older than specified days.

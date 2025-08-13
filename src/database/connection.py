@@ -169,6 +169,50 @@ class DatabaseConnection:
                 logger.info(f"Created organization '{org_name}' with ID {org_id}")
                 return org_id
                 
+    def reset_all_data(self):
+        """Reset all data tables to ensure coherent dataset.
+        
+        WARNING: This will delete all entities and time-series data!
+        Organization data is preserved.
+        """
+        logger.warning("Resetting all data tables - this will delete all entities and time-series data")
+        
+        # Core tables to reset (these should exist)
+        reset_queries = [
+            "TRUNCATE core.values_demo CASCADE;",
+            "TRUNCATE core.values_demo_current CASCADE;",
+            "TRUNCATE core.entity CASCADE;",
+            "TRUNCATE core.entity_tag CASCADE;"
+        ]
+        
+        # Optional tables that may not exist depending on schema version
+        optional_reset_queries = [
+            "TRUNCATE core.org_entity_permission CASCADE;",
+            "TRUNCATE core.entity_his CASCADE;"
+        ]
+        
+        # Execute core resets
+        for query in reset_queries:
+            try:
+                self.execute_update(query)
+                logger.info(f"Executed: {query}")
+            except Exception as e:
+                logger.error(f"Failed to execute reset query: {query}, Error: {e}")
+                raise
+        
+        # Execute optional resets (ignore if table doesn't exist)
+        for query in optional_reset_queries:
+            try:
+                self.execute_update(query)
+                logger.info(f"Executed: {query}")
+            except Exception as e:
+                if "does not exist" in str(e):
+                    logger.debug(f"Optional table not found, skipping: {query}")
+                else:
+                    logger.warning(f"Optional reset query failed: {query}, Error: {e}")
+                
+        logger.info("All data tables have been reset successfully")
+    
     def close(self):
         """Close all connections in the pool."""
         if self.pool:
