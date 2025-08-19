@@ -26,6 +26,14 @@ class TimeSeriesGenerator:
         self.random = random.Random(42)  # Reproducible random seed
         self.np_random = np.random.RandomState(42)
         
+        # Initialize totalizer accumulators for energy/volume meters
+        self.totalizers = {
+            'electric_energy': 0.0,  # kWh
+            'gas_volume': 0.0,       # ft³
+            'water_volume': 0.0,     # gallons
+            'chiller_energy': {}     # kWh per chiller
+        }
+        
     def generate_historical_data(self, days: int = 30) -> pd.DataFrame:
         """Generate historical time-series data.
         
@@ -282,6 +290,39 @@ class TimeSeriesGenerator:
                     'status': self._get_data_status()
                 })
                 
+                # Condenser temperature (heat rejection side)
+                # Condenser temp = outdoor temp + approach temp based on load and efficiency
+                heat_rejection_kw = power_kw + (capacity_tons * load_ratio * 3.517)  # Power + cooling load
+                approach_temp = 10 + (heat_rejection_kw / capacity_tons) * 1.5  # Approach increases with load
+                condenser_temp = outdoor_temp + approach_temp + self.np_random.normal(0, 1)
+                
+                # Ensure condenser temp is always higher than return water temp (thermodynamics)
+                # The condenser must reject heat, so it must be warmer than the chilled water
+                min_condenser_temp = return_temp + 15  # At least 15°F above CHW return
+                condenser_temp = max(condenser_temp, min_condenser_temp)
+                
+                entity_id = self.entity_map[f"point-chiller-{i}-condenserTemp"]
+                data_points.append({
+                    'entity_id': entity_id,
+                    'ts': timestamp,
+                    'value_n': round(condenser_temp, 1),
+                    'status': self._get_data_status()
+                })
+                
+                # Energy totalizer (accumulating kWh)
+                interval_hours = self.config['generation']['data_interval_minutes'] / 60.0
+                if i not in self.totalizers['chiller_energy']:
+                    self.totalizers['chiller_energy'][i] = 0.0
+                self.totalizers['chiller_energy'][i] += power_kw * interval_hours
+                
+                entity_id = self.entity_map[f"point-chiller-{i}-energy"]
+                data_points.append({
+                    'entity_id': entity_id,
+                    'ts': timestamp,
+                    'value_n': round(self.totalizers['chiller_energy'][i], 1),
+                    'status': self._get_data_status()
+                })
+                
         return data_points
         
     def _generate_ahu_data(self, timestamp: datetime, outdoor_temp: float,
@@ -338,6 +379,50 @@ class TimeSeriesGenerator:
                     'entity_id': entity_id,
                     'ts': timestamp,
                     'value_n': round(fan_speed, 0),
+                    'status': self._get_data_status()
+                })
+                
+                # Mixed air temperature (blend of return and outdoor air)
+                # Determine outdoor air fraction based on economizer logic
+                if season in ['spring', 'fall'] and 55 <= outdoor_temp <= 70:
+                    # Free cooling mode - use more outdoor air
+                    oa_fraction = 0.7 + self.np_random.normal(0, 0.05)
+                elif occupancy_ratio > 0.1:
+                    # Minimum outdoor air for ventilation (ASHRAE 62.1)
+                    oa_fraction = 0.15 + occupancy_ratio * 0.15  # 15-30% based on occupancy
+                else:
+                    # Unoccupied - minimum OA
+                    oa_fraction = 0.1
+                    
+                oa_fraction = max(0.1, min(1.0, oa_fraction))
+                mixed_temp = return_temp * (1 - oa_fraction) + outdoor_temp * oa_fraction
+                mixed_temp += self.np_random.normal(0, 0.5)
+                
+                entity_id = self.entity_map[f"point-ahu-{i}-mixedTemp"]
+                data_points.append({
+                    'entity_id': entity_id,
+                    'ts': timestamp,
+                    'value_n': round(mixed_temp, 1),
+                    'status': self._get_data_status()
+                })
+                
+                # Static pressure (inches of water column)
+                # Pressure varies with fan speed (affinity laws) and system resistance
+                base_pressure = 1.5  # Design static pressure at 100% flow
+                pressure = base_pressure * (fan_speed / 100) ** 2  # Pressure follows square law
+                
+                # Add variation based on VAV damper positions (assumed from occupancy)
+                # Higher occupancy = more VAVs open = lower static pressure
+                resistance_factor = 1.0 + (1 - occupancy_ratio) * 0.3  # Up to 30% increase when VAVs close
+                pressure *= resistance_factor
+                pressure += self.np_random.normal(0, 0.05)
+                pressure = max(0.5, min(3.0, pressure))  # Typical range 0.5-3.0 inH2O
+                
+                entity_id = self.entity_map[f"point-ahu-{i}-staticPressure"]
+                data_points.append({
+                    'entity_id': entity_id,
+                    'ts': timestamp,
+                    'value_n': round(pressure, 2),
                     'status': self._get_data_status()
                 })
                 
@@ -444,6 +529,7 @@ class TimeSeriesGenerator:
                            season: str, occupancy_ratio: float) -> List[Dict]:
         """Generate utility meter data points."""
         data_points = []
+        interval_hours = self.config['generation']['data_interval_minutes'] / 60.0
         
         # Electric meter - mainly HVAC load
         base_electric_kw = 200  # Base building load
@@ -461,6 +547,37 @@ class TimeSeriesGenerator:
             'status': self._get_data_status()
         })
         
+        # Electric energy totalizer (accumulating kWh)
+        self.totalizers['electric_energy'] += total_electric_kw * interval_hours
+        entity_id = self.entity_map["point-meter-main-electric-energy"]
+        data_points.append({
+            'entity_id': entity_id,
+            'ts': timestamp,
+            'value_n': round(self.totalizers['electric_energy'], 1),
+            'status': self._get_data_status()
+        })
+        
+        # Power factor (realistic range 0.85-0.95, worse at low loads)
+        load_ratio = total_electric_kw / 800  # Assume 800kW max capacity
+        base_pf = 0.92  # Good power factor at optimal load
+        # Power factor degrades at low loads
+        if load_ratio < 0.3:
+            power_factor = base_pf - 0.05
+        elif load_ratio > 0.8:
+            power_factor = base_pf - 0.02  # Slightly worse at very high loads
+        else:
+            power_factor = base_pf
+        power_factor += self.np_random.normal(0, 0.01)
+        power_factor = max(0.80, min(0.98, power_factor))
+        
+        entity_id = self.entity_map["point-meter-main-electric-powerFactor"]
+        data_points.append({
+            'entity_id': entity_id,
+            'ts': timestamp,
+            'value_n': round(power_factor, 3),
+            'status': self._get_data_status()
+        })
+        
         # Gas meter - heating load
         gas_flow = 0
         if season in ['winter', 'fall'] and outdoor_temp < 60:
@@ -475,13 +592,54 @@ class TimeSeriesGenerator:
             'status': self._get_data_status()
         })
         
+        # Gas volume totalizer (accumulating ft³)
+        self.totalizers['gas_volume'] += gas_flow * interval_hours
+        entity_id = self.entity_map["point-meter-main-gas-volume"]
+        data_points.append({
+            'entity_id': entity_id,
+            'ts': timestamp,
+            'value_n': round(self.totalizers['gas_volume'], 0),
+            'status': self._get_data_status()
+        })
+        
         # Water meter - mainly HVAC and occupancy
-        water_flow = occupancy_ratio * 20 + 5  # Base flow
+        water_flow = occupancy_ratio * 20 + 5  # Base flow in gal/min
+        
+        # Add cooling tower makeup water when chillers are running
+        # Check if any chillers are running
+        chiller_running = False
+        for i in range(1, self.config['equipment']['chillers']['count'] + 1):
+            if f'point-chiller-{i}-status' in self.entity_map:
+                # Assume chiller is running if outdoor temp > 65 and occupied
+                if outdoor_temp > 65 and occupancy_ratio > 0.1:
+                    chiller_running = True
+                    break
+        
+        if chiller_running:
+            # Cooling tower makeup water proportional to heat rejection
+            cooling_load_factor = max(0, (outdoor_temp - 65) / 30)
+            water_flow += cooling_load_factor * 15  # Additional flow for cooling tower
+        
+        water_flow += self.np_random.normal(0, 1)
+        water_flow = max(0, water_flow)
+        
         entity_id = self.entity_map["point-meter-main-water-flow"]
         data_points.append({
             'entity_id': entity_id,
             'ts': timestamp,
             'value_n': round(water_flow, 1),
+            'status': self._get_data_status()
+        })
+        
+        # Water volume totalizer (accumulating gallons)
+        # Convert flow rate (gal/min) to volume (gal) over interval
+        water_volume_increment = water_flow * (interval_hours * 60)  # gal/min * minutes
+        self.totalizers['water_volume'] += water_volume_increment
+        entity_id = self.entity_map["point-meter-main-water-volume"]
+        data_points.append({
+            'entity_id': entity_id,
+            'ts': timestamp,
+            'value_n': round(self.totalizers['water_volume'], 0),
             'status': self._get_data_status()
         })
         
