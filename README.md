@@ -1,594 +1,127 @@
-# Haystack Building Data Simulator
+# Haystack Platform
 
-A comprehensive building automation data generator that creates authentic Project Haystack-compliant time-series data. Runs in batch mode for historical data generation or as a continuous service for real-time simulation.
+Complete building automation data platform with simulator, API, and web interface.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## 🏗️ Architecture
 
-## 🌟 Key Features
-
-### Data Generation Modes
-- **Batch Mode**: Generate days/months of historical data instantly
-- **Continuous Service Mode**: Run 24/7 generating data every 15 minutes
-- **Pause/Resume**: Automatic gap detection and backfilling after downtime
-- **State Persistence**: Maintains totalizer continuity across restarts
-
-### Building Simulation
-- **Project Haystack Compliant**: Full v3 tagging standards
-- **Realistic HVAC System**: Complete chiller, AHU, and VAV simulation
-- **Authentic Patterns**: Occupancy-driven loads, seasonal variations
-- **Weather Integration**: Outdoor conditions affecting building performance
-- **Data Quality Simulation**: Realistic sensor noise, drift, and comm failures
-
-### Deployment Options
-- **Local Development**: Docker or native Python
-- **Cloud Deployment**: Railway-ready with automatic scaling
-- **Production Ready**: Health checks, monitoring, comprehensive testing
-
-### Technical Excellence
-- **TimescaleDB Optimized**: Hypertables for time-series performance
-- **100% Test Coverage**: Complete test suite with validation scripts
-- **Gap Filling**: Intelligent backfilling of missing data periods
-- **State Management**: PostgreSQL-based state persistence
-
----
-
-## 📚 Documentation
-
-### Getting Started
-- **[Quick Start Guide](#quick-start)** - Get running in 5 minutes
-- **[Docker Setup](docs/DOCKER_LOCAL_SETUP.md)** - Local development with Docker
-- **[Command Reference](#usage)** - All command-line options
-
-### Deployment
-- **[Railway Deployment](docs/RAILWAY_DEPLOYMENT.md)** - Deploy to production cloud
-- **[Service Mode](docs/SERVICE_MODE_SUMMARY.md)** - Continuous operation guide
-- **[Docker Scripts](scripts/README.md)** - Convenience automation scripts
-
-### Development
-- **[Architecture](#architecture)** - Code structure overview
-- **[Testing](#testing)** - Running tests and validations
-- **[Design Decisions](knowledge/CRITICAL_DESIGN_DECISIONS.md)** - Key architectural choices
-- **[Database Handling](docs/EMPTY_VS_EXISTING_DB.md)** - Fresh vs existing DB
-
-### Advanced
-- **[MCP Server Guide](knowledge/MCP_SERVER_IMPLEMENTATION_GUIDE.md)** - Model Context Protocol integration
-- **[Web App Plan](knowledge/WEB_APP_IMPLEMENTATION_PLAN.md)** - Future web interface
-
----
-
-## 🏗️ Building System
-
-The simulator models a **Downtown Office Tower**:
-- 150,000 sq ft, 12 floors
-- 2 chillers (400 tons each)
-- 4 air handling units (3 floors each)
-- 48 VAV boxes (4 per floor)
-- Utility meters (electric, gas, water)
-- **350+ sensor and control points**
-
-### Generated Entities
-- **1 site entity** with full Haystack metadata
-- **58 equipment entities** (chillers, AHUs, VAVs, meters)
-- **293 point entities** (sensors, setpoints, commands)
-- **Hierarchical relationships** (VAVs→AHUs→Site)
-
-### Data Volume
-**Batch Mode (30 days)**:
-- 720,000+ time-series records
-- 96 intervals per day × 250 active points
-- 15-minute sampling interval
-
-**Continuous Mode**:
-- ~280 points updated every 15 minutes
-- ~26,880 records per day
-- Automatic data retention policies
-
----
+```
+haystack-platform/
+├── api/           FastAPI backend (extended db-service-layer)
+├── simulator/     Haystack building data generator
+├── webapp/        Next.js web interface
+├── schema/        Database schemas (TimescaleDB + PostgreSQL)
+└── docs/          Documentation
+```
 
 ## 🚀 Quick Start
 
+```bash
+# Start all services
+docker-compose up
+
+# Access:
+# - API:              http://localhost:8000
+# - API Docs:         http://localhost:8000/docs
+# - Simulator Health: http://localhost:8080/health
+# - Web GUI:          http://localhost:3000
+```
+
+## 📚 Documentation
+
+- **[API Extension Plan](API_EXTENSION_PLAN.md)** - Implementation roadmap
+- **[Pre-Deployment Review](PRE_DEPLOYMENT_REVIEW.md)** - Production readiness
+- **[DB Service Layer Analysis](knowledge/DB_SERVICE_LAYER_ANALYSIS.md)** - API architecture
+- **[Critical Design Decisions](knowledge/CRITICAL_DESIGN_DECISIONS.md)** - Design rationale
+
+## 🛠️ Development
+
 ### Prerequisites
-- Python 3.11+
-- TimescaleDB instance (Docker recommended)
-- 2GB disk space for 30-day dataset
-
-### Option 1: Docker (Recommended)
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd haystack-data-simulator
-
-# Start database (uses Docker)
-./scripts/docker-start.sh
-
-# Generate 7 days of data
-python src/main.py --reset --days 7
-```
-
-**See [Docker Setup Guide](docs/DOCKER_LOCAL_SETUP.md) for details**
-
-### Option 2: Native Installation
-
-```bash
-# Clone and install
-git clone <repository-url>
-cd haystack-data-simulator
-pip install -r requirements.txt
-
-# Configure database (edit config/database_config.yaml)
-# Run simulator
-python src/main.py --reset --days 30
-```
-
-### Verify Installation
-
-```bash
-# Check entity count
-psql -d datakwip -c "SELECT COUNT(*) FROM core.entity;"
-# Should show 358 entities
-
-# Check data
-psql -d datakwip -c "SELECT COUNT(*) FROM core.values_docker_test;"
-# Should show thousands of records
-```
-
----
-
-## 💻 Usage
-
-### Batch Mode (Historical Data Generation)
-
-```bash
-# Generate 30 days with full reset
-python src/main.py --reset --days 30
-
-# Generate only building entities
-python src/main.py --reset --entities-only
-
-# Use custom configuration
-python src/main.py --db-config config/custom.yaml --days 7
-
-# Skip validation queries (faster)
-python src/main.py --reset --days 90 --skip-validation
-```
-
-### Continuous Service Mode
-
-```bash
-# Run as continuous service
-python src/service_main.py
-
-# With health check endpoint
-python src/service_main.py --health-port 8080
-```
-
-**Service generates data every 15 minutes indefinitely. See [Service Mode Guide](docs/SERVICE_MODE_SUMMARY.md)**
-
-### Command Line Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--reset` | Clear all data before generation | false |
-| `--days N` | Generate N days of historical data | 30 |
-| `--entities-only` | Create entities without time-series | false |
-| `--db-config FILE` | Custom database config | `config/database_config.yaml` |
-| `--building-config FILE` | Custom building config | `config/building_config.yaml` |
-| `--skip-validation` | Skip validation queries | false |
-| `--service` | Run in continuous service mode | false |
-
----
-
-## ⚙️ Configuration
-
-### Database Configuration
-**File**: `config/database_config.yaml`
-
-```yaml
-database:
-  host: localhost
-  port: 5432
-  database: datakwip
-  user: datakwip_user
-  password: datakwip_password
-
-organization:
-  name: "Your Organization"
-  key: "your_org"  # Used for table naming
-
-tables:
-  value_table: "values_your_org"
-  current_table: "values_your_org_current"
-```
-
-**Table Naming**: Tables are named based on `organization.key`:
-- `values_demo` → demo organization
-- `values_docker_test` → Docker testing
-- Allows multiple organizations in one database
-
-### Building Configuration
-**File**: `config/building_config.yaml`
-
-**Fully customizable building simulation** - change any parameter:
-
-**Site Details**:
-- Building size: 150,000 sq ft (configurable)
-- Floor count: 12 floors (configurable)
-- Location and timezone
-- Building type and function
-
-**HVAC Equipment Quantities**:
-- Chillers: 2 × 400 tons (change count/capacity)
-- AHUs: 4 units serving 3 floors each
-- VAV Boxes: 4 per floor (48 total)
-- Utility meters: Electric, gas, water
-
-**Operational Parameters**:
-- Occupancy schedules (weekday/weekend)
-- Temperature setpoints (occupied/unoccupied)
-- Weather patterns (seasonal ranges)
-- Equipment performance curves
-- Data quality settings (noise, faults)
-
-**Example: Create a Larger Building**
-```yaml
-site:
-  floors: 20            # Up from 12
-  area: 300000          # Up from 150,000 sq ft
-equipment:
-  chillers:
-    count: 4            # Up from 2
-  ahus:
-    count: 8            # Up from 4
-  vav_boxes:
-    per_floor: 6        # Up from 4
-```
-
-This generates proportionally more entities and data points!
-
----
-
-## 🧪 Testing
-
-### Run All Tests
-
-```bash
-# Run test suite
-python test/test_state_manager.py
-python test/test_gap_filler.py
-python test/test_continuous_service.py
-python test/test_resumption.py
-```
-
-### Run Validations
-
-```bash
-# Validate service state
-python validation/validate_service_state.py
-
-# Validate data continuity
-python validation/validate_gaps.py
-
-# Validate service health
-python validation/validate_service_health.py
-```
-
-### Expected Results
-All tests should show:
-```
-✅ ALL [TEST NAME] TESTS PASSED
-```
-
-**See [Testing Guide](docs/SERVICE_MODE_SUMMARY.md#validation--testing-100-complete) for details**
-
----
-
-## 🏛️ Architecture
-
-```
-haystack-data-simulator/
-├── config/                   # Configuration files
-│   ├── database_config.yaml
-│   ├── database_config.docker.yaml
-│   └── building_config.yaml
-│
-├── src/                      # Source code
-│   ├── database/            # DB connection & schema
-│   ├── generators/          # Data generation logic
-│   ├── models/              # Building system models
-│   ├── service/             # Continuous service mode
-│   ├── main.py              # Batch mode entry point
-│   └── service_main.py      # Service mode entry point
-│
-├── test/                     # Test suite
-│   ├── test_state_manager.py
-│   ├── test_gap_filler.py
-│   ├── test_continuous_service.py
-│   └── test_resumption.py
-│
-├── validation/              # Data validation scripts
-│   ├── validate_service_state.py
-│   ├── validate_gaps.py
-│   └── validate_service_health.py
-│
-├── schema/                  # Database schemas
-│   ├── sql_schema_core_v2.sql
-│   └── simulator_state.sql
-│
-├── docs/                    # Documentation
-├── scripts/                 # Helper scripts
-└── knowledge/              # Design decisions & guides
-```
-
-### Key Components
-
-**Batch Mode**: `src/main.py`
-- One-time historical data generation
-- Fast bulk loading (10k records/second)
-- Validation queries
-
-**Service Mode**: `src/service_main.py`
-- Continuous operation
-- APScheduler for 15-minute intervals
-- Health check HTTP endpoint
-- Automatic gap detection/filling
-
-**State Manager**: `src/service/state_manager.py`
-- Persist service state to PostgreSQL
-- Track last run timestamp
-- Maintain totalizer values
-- Detect downtime gaps
-
-**Gap Filler**: `src/service/gap_filler.py`
-- Backfill missing time periods
-- Maintain totalizer continuity
-- Progressive batch filling
-
----
-
-## 📊 Data Validation
-
-### Sample Queries
-
-```sql
--- Average zone temperatures during occupied hours
-SELECT AVG(v.value_n) as avg_temp
-FROM core.values_demo v
-JOIN core.entity_tag et ON v.entity_id = et.entity_id
-JOIN core.tag_def td ON et.tag_id = td.id
-WHERE td.name = 'zoneTemp'
-AND EXTRACT(hour FROM v.ts) BETWEEN 8 AND 18;
-
--- Daily building energy consumption
-SELECT DATE(ts) as date,
-       MAX(value_n) - MIN(value_n) as daily_kwh
-FROM core.values_demo v
-JOIN core.entity_tag et ON v.entity_id = et.entity_id
-JOIN core.tag_def td ON et.tag_id = td.id
-WHERE td.name = 'energy'
-GROUP BY DATE(ts)
-ORDER BY date;
-
--- Equipment running status
-SELECT e.id, et_id.value_s as name, v.value_b as status
-FROM core.entity e
-JOIN core.entity_tag et_id ON e.id = et_id.entity_id
-JOIN core.tag_def td_id ON et_id.tag_id = td_id.id
-JOIN core.values_demo_current v ON e.id = v.entity_id
-JOIN core.entity_tag et_cmd ON e.id = et_cmd.entity_id
-JOIN core.tag_def td_cmd ON et_cmd.tag_id = td_cmd.id
-WHERE td_id.name = 'id'
-AND td_cmd.name = 'run'
-AND td_cmd.name = 'cmd';
-```
-
-### Realistic Data Patterns
-
-**Occupancy Schedule**:
-- Weekday peak: 85% at 9 AM - 5 PM
-- Early arrival: 15% at 7 AM
-- Weekend: 5% minimal occupancy
-- Holiday schedule included
-
-**HVAC Control Logic**:
-- Temperature setpoints: 72°F occupied, 78°F unoccupied
-- Chiller staging based on cooling load
-- VAV damper modulation for zone control
-- Equipment efficiency curves
-
-**Data Quality**:
-- 95% good data with "ok" status
-- 3% stale data during communication issues
-- 2% fault data during maintenance events
-
----
-
-## 🐳 Docker Deployment
+- Docker & Docker Compose
+- Python 3.11+ (for local development)
+- Node.js 20+ (for webapp development)
 
 ### Local Development
 
 ```bash
-# Start TimescaleDB only
-./scripts/docker-start.sh
+# Start databases only
+docker-compose up timescaledb statedb
 
-# Run simulator on host
-python src/main.py --reset --days 7
-python src/service_main.py
+# Run API locally
+cd api
+pip install -r requirements.txt
+uvicorn src.app.main:app --reload --port 8000
+
+# Run simulator locally
+cd simulator
+pip install -r requirements.txt
+python src/main.py --days 7
+
+# Run webapp locally
+cd webapp
+npm install
+npm run dev
 ```
 
-### Full Stack
+### Running Tests
 
 ```bash
-# Start DB + Simulator service
-./scripts/docker-start.sh full
+# Simulator tests
+cd simulator
+python test/test_state_manager.py
+python test/test_gap_filler.py
+python test/test_continuous_service.py
+python test/test_resumption.py
 
-# Check health
-curl http://localhost:8080/health
-
-# View logs
-docker-compose logs -f simulator
-
-# Stop (keeps data)
-./scripts/docker-stop.sh
-
-# Stop and reset all data
-./scripts/docker-stop.sh reset
-```
-
-**See [Docker Setup Guide](docs/DOCKER_LOCAL_SETUP.md) and [Scripts README](scripts/README.md)**
-
----
-
-## ☁️ Cloud Deployment
-
-### Railway Deployment
-
-Deploy to Railway cloud in minutes:
-
-1. Push to GitHub
-2. Connect Railway to repository
-3. Add TimescaleDB database
-4. Set environment variables
-5. Deploy automatically
-
-**Complete guide**: [Railway Deployment](docs/RAILWAY_DEPLOYMENT.md)
-
-### Environment Variables
-
-```bash
-# Database (Railway provides automatically)
-DATABASE_URL=postgresql://user:pass@host:5432/railway
-
-# Service configuration (optional)
-SERVICE_INTERVAL_MINUTES=15
-HEALTH_CHECK_PORT=8080
-LOG_LEVEL=INFO
-```
-
-### Monitoring
-
-- Health endpoint: `https://your-service.railway.app/health`
-- Automatic restarts on failure
-- Gap detection and backfilling after downtime
-- State persistence across deployments
-
----
-
-## 🛠️ Troubleshooting
-
-### Database Connection Issues
-
-```bash
-# Verify Docker is running
-docker ps | grep timescaledb
-
-# Test database connection
-docker exec haystack-timescaledb pg_isready -U datakwip_user
-
-# Check logs
-docker-compose logs timescaledb
-```
-
-### Data Generation Issues
-
-```bash
-# Use --reset flag for clean slate
-python src/main.py --reset --days 1
-
-# Check for entity conflicts
-psql -d datakwip -c "SELECT COUNT(*) FROM core.entity;"
-
-# Verify table names match config
-psql -d datakwip -c "\dt core.values_*"
-```
-
-### Service Mode Issues
-
-```bash
-# Check service state
-psql -d datakwip -c "SELECT * FROM core.simulator_state;"
-
-# Verify health endpoint
-curl http://localhost:8080/health
-
-# Run validations
+# Validation
+python validation/validate_service_state.py
+python validation/validate_gaps.py
 python validation/validate_service_health.py
 ```
 
-**More troubleshooting**: See individual guides linked in [Documentation](#-documentation)
+## 🎯 Services
 
----
+### API (Port 8000)
+FastAPI backend with:
+- Building data management (entities, tags, time-series)
+- Poller configuration
+- Simulator control endpoints (future)
+- Multi-database support
 
-## 🤝 Contributing
+### Simulator (Port 8080)
+Data generation service:
+- Realistic building automation data
+- Continuous 15-minute interval generation
+- Gap detection and filling
+- State persistence
 
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+### WebApp (Port 3000)
+Next.js web interface (coming soon):
+- System dashboard
+- Simulator control panel
+- Database inspector
+- Activity timeline
+- Data explorer
 
-### Development Setup
+## 📦 Deployment
+
+### Railway
+
+See [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md) for detailed instructions.
+
+### Docker Compose (Production)
 
 ```bash
-# Install development dependencies
-pip install -r requirements.txt
-
-# Run tests
-python test/test_state_manager.py
-
-# Run validations
-python validation/validate_service_state.py
+docker-compose -f docker-compose.prod.yaml up -d
 ```
 
-**See [Design Decisions](knowledge/CRITICAL_DESIGN_DECISIONS.md) for architectural guidance**
+## 🤖 Claude Code
 
----
+This project is optimized for development with Claude Code. See [CLAUDE.md](CLAUDE.md) for instructions.
 
-## 📝 License
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+[Add your license]
 
----
+## 🙏 Acknowledgments
 
-## 🆘 Support
-
-### Documentation
-- [Quick Start](#quick-start)
-- [Docker Setup](docs/DOCKER_LOCAL_SETUP.md)
-- [Railway Deployment](docs/RAILWAY_DEPLOYMENT.md)
-- [Service Mode Guide](docs/SERVICE_MODE_SUMMARY.md)
-
-### Issues
-1. Check [Troubleshooting](#-troubleshooting) section
-2. Review relevant documentation
-3. Check logs for error messages
-4. Submit GitHub issue with:
-   - Configuration files (sanitized)
-   - Error messages
-   - Steps to reproduce
-
----
-
-## 🎯 Use Cases
-
-- **Building Analytics Development**: Test applications with realistic data
-- **Algorithm Development**: ML/AI model training with authentic patterns
-- **Integration Testing**: Validate BMS integrations without real buildings
-- **Demo Environments**: Showcase building analytics platforms
-- **Training**: Learn building automation and time-series databases
-- **Research**: Study HVAC optimization and energy management
-
----
-
-## 📈 Roadmap
-
-- [ ] Web-based monitoring dashboard ([Web App Plan](knowledge/WEB_APP_IMPLEMENTATION_PLAN.md))
-- [ ] MCP server integration ([MCP Guide](knowledge/MCP_SERVER_IMPLEMENTATION_GUIDE.md))
-- [ ] Additional equipment types (boilers, cooling towers)
-- [ ] Multi-building support
-- [ ] Fault injection scenarios
-- [ ] GraphQL API
-
----
-
-**Built with ❤️ for the building automation community**
+Built on top of [db-service-layer](https://github.com/datakwip/db-service-layer)

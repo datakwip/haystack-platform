@@ -1,153 +1,220 @@
-# Claude Code Assistant Instructions
+# Claude Code Assistant Instructions - Haystack Platform
 
 ## Project Overview
-This is a Haystack Building Data Simulator that generates realistic building automation system data for a PostgreSQL database following the Haystack v3 schema.
 
-## Folder Structure and File Organization
+This is a **monorepo** containing the complete Haystack Building Data Platform:
 
-### Always place files in the correct folders:
+### Services
+
+1. **api/** - FastAPI backend (extended db-service-layer)
+   - Building data management (entities, tags, time-series)
+   - Simulator control endpoints (`/simulator/*`)
+   - Multi-database support (TimescaleDB + PostgreSQL)
+
+2. **simulator/** - Haystack data generator service
+   - Generates realistic building automation data
+   - Calls API endpoints for data insertion
+   - Manages operational state
+
+3. **webapp/** - Next.js web interface
+   - System dashboard
+   - Simulator control panel
+   - Data explorer with Haystack tag filtering
+
+## Folder Structure
 
 ```
-haystack-data-simulator/
-├── config/                 # Configuration files
-│   ├── building_config.yaml
-│   └── database_config.yaml
+haystack-platform/
+├── api/
+│   ├── src/app/
+│   │   ├── api/simulator/       # NEW: Simulator endpoints
+│   │   ├── api/source_objects/  # Existing: Entity, tag, value APIs
+│   │   ├── services/            # Business logic
+│   │   └── model/               # Pydantic & SQLAlchemy models
+│   └── Dockerfile
 │
-├── docs/                   # Project documentation
-│   └── project-requirements.md
+├── simulator/
+│   ├── src/
+│   │   ├── service/            # Core simulator logic
+│   │   │   ├── api_client.py   # Calls ../api endpoints
+│   │   │   ├── continuous_generator.py
+│   │   │   └── cognito_auth.py
+│   │   ├── generators/         # Data generation
+│   │   └── database/           # DB utilities
+│   ├── config/                 # YAML configs
+│   ├── test/                   # Tests
+│   └── Dockerfile
 │
-├── knowledge/              # Critical design decisions and guides
-│   ├── CRITICAL_DESIGN_DECISIONS.md
-│   └── MCP_SERVER_IMPLEMENTATION_GUIDE.md
+├── webapp/
+│   ├── app/
+│   │   ├── (dashboard)/        # Authenticated pages
+│   │   │   ├── page.tsx        # Main dashboard
+│   │   │   ├── simulator/      # Simulator control
+│   │   │   ├── activity/       # Activity timeline
+│   │   │   └── explorer/       # Data explorer
+│   │   └── api/                # Next.js API routes
+│   ├── components/             # React components
+│   └── lib/
+│       └── api-client.ts       # Calls ../api endpoints
 │
-├── schema/                 # Database schema files
-│   └── sql_schema_core_v2.sql
+├── schema/                     # Database schemas
+│   ├── 01_sql_schema_core_v2.sql
+│   └── 02_simulator_state.sql
 │
-├── src/                    # Source code
-│   ├── database/          # Database connection and operations
-│   │   ├── connection.py
-│   │   ├── data_loader.py
-│   │   └── schema_setup.py
-│   │
-│   ├── generators/        # Data generation modules
-│   │   ├── entities.py
-│   │   ├── schedules.py
-│   │   ├── time_series.py
-│   │   └── weather.py
-│   │
-│   ├── models/           # Data models
-│   │   ├── building.py
-│   │   ├── hvac.py
-│   │   └── sensors.py
-│   │
-│   └── main.py           # Main entry point
-│
-├── test/                  # Test files
-│   ├── test_*.py         # Unit and integration tests
-│   └── verify_*.py       # Verification scripts
-│
-├── validation/           # Data validation scripts
-│   └── validate_*.py     # Various validation utilities
-│
-└── requirements.txt      # Python dependencies
+├── docs/                       # Documentation
+├── knowledge/                  # Critical design decisions
+└── docker-compose.yaml         # All services
 ```
+
+## Important: Multi-Service Coordination
+
+When making changes that span services:
+
+✅ **DO THIS** (Atomic changes across services):
+```
+You: "Add a /simulator/metrics endpoint that returns generation stats,
+     update the simulator to call it every hour, and display metrics
+     on the webapp dashboard"
+
+Claude:
+1. Adds endpoint in api/src/app/api/simulator/simulator_api.py
+2. Updates simulator/src/service/api_client.py with metrics() method
+3. Updates simulator/src/service/continuous_generator.py to call it
+4. Updates webapp/lib/api-client.ts with getMetrics()
+5. Updates webapp/app/(dashboard)/page.tsx to display metrics
+```
+
+❌ **NOT THIS** (Making changes one service at a time):
+```
+You: "Add /simulator/metrics in the API"
+Claude: [adds endpoint]
+You: "Now update the simulator to call it"
+Claude: [updates simulator, might miss details from API]
+```
+
+### Cross-Service Guidelines
+
+- **API endpoint changes** → Update both `simulator/src/service/api_client.py` AND `webapp/lib/api-client.ts`
+- **Database schema changes** → Update all three services that touch the DB
+- **Authentication changes** → Update API middleware, simulator auth, webapp auth
+- **Always test with**: `docker-compose up`
 
 ## File Placement Rules
 
-1. **Configuration Files**: Place in `config/`
-   - YAML, JSON, or INI configuration files
-   - Environment-specific settings
+1. **API Endpoints**: `api/src/app/api/`
+   - Simulator-specific: `api/src/app/api/simulator/`
+   - Existing endpoints: `api/src/app/api/source_objects/`
 
-2. **Source Code**: Place in `src/`
-   - Database operations → `src/database/`
-   - Data generators → `src/generators/`
-   - Data models → `src/models/`
-   - Main scripts → `src/`
+2. **Business Logic**: `api/src/app/services/`
+   - Simulator services: `simulator_config_service.py`, `simulator_state_service.py`
 
-3. **Tests**: Place in `test/`
-   - Unit tests → `test/test_*.py`
-   - Integration tests → `test/test_*.py`
-   - Verification scripts → `test/verify_*.py`
+3. **Data Models**:
+   - Pydantic: `api/src/app/model/pydantic/simulator/`
+   - SQLAlchemy: `api/src/app/model/sqlalchemy/`
 
-4. **Validation Scripts**: Place in `validation/`
-   - Data validation → `validation/validate_*.py`
-   - Schema validation → `validation/validate_*.py`
+4. **Simulator Core**: `simulator/src/service/`
+   - Generator logic: `simulator/src/generators/`
+   - Tests: `simulator/test/`
 
-5. **Documentation**: Place in `docs/`
-   - Project requirements
-   - API documentation
-   - User guides
+5. **WebApp Pages**: `webapp/app/(dashboard)/`
+   - Components: `webapp/components/`
+   - Utilities: `webapp/lib/`
 
-6. **Knowledge Base**: Place in `knowledge/`
-   - Critical design decisions
-   - Implementation guides
-   - Lessons learned
+6. **Shared Resources**:
+   - Database schemas: `schema/`
+   - Documentation: `docs/`
+   - Design decisions: `knowledge/`
 
-7. **Database Schemas**: Place in `schema/`
-   - SQL schema files
-   - Migration scripts
+## Development Workflow
 
-8. **Temporary Files**: Don't commit
-   - Log files (*.log)
-   - Cache files
-   - IDE configuration
+### Starting Services
 
-## Important Commands
-
-### Running the Simulator
 ```bash
-# Full reset and generate 30 days of data
-python src/main.py --reset --days 30
+# All services
+docker-compose up
 
-# Generate only entities
-python src/main.py --reset --entities-only
+# Specific service
+docker-compose up timescaledb statedb api
 
-# Generate 7 days without reset (only safe for first run)
-python src/main.py --days 7
+# Logs for one service
+docker-compose logs -f simulator
 ```
 
-### Testing
+### Making Changes
+
+1. **Make changes across services** in single Claude session
+2. **Test**: `docker-compose up`
+3. **Commit all changes together** (atomic)
+4. **Deploy all services** (coordinated)
+
+### Running Tests
+
 ```bash
-# Run all tests
-python -m pytest test/
+# Simulator tests
+cd simulator
+python test/test_state_manager.py
+python test/test_gap_filler.py
 
-# Run specific test
-python test/test_missing_points.py
+# API tests
+cd api
+pytest
 
-# Verify data coherence
-python test/verify_coherence.py
-```
-
-### Validation
-```bash
-# Validate all points have data
-python validation/validate_all_points_data.py
-
-# Validate equipment status
-python validation/validate_equipment_status.py
+# Webapp tests
+cd webapp
+npm test
 ```
 
 ## Key Design Decisions
 
-1. **Data Coherency**: Always use `--reset` flag when regenerating data to ensure coherent datasets
-2. **Missing Data Points**: All sensor points (except command points) should generate data when equipment is running
-3. **Totalizers**: Energy and volume meters accumulate monotonically (never decrease)
-4. **Physical Relationships**: 
-   - Condenser temp > CHW return temp
-   - Mixed air temp between outdoor and return temps
-   - Static pressure follows fan affinity laws
+### Two-Database Architecture
 
-## Common Issues and Solutions
+- **TimescaleDB** (port 5432): Building data (entities, tags, time-series)
+- **PostgreSQL** (port 5433): Simulator operational state
 
-1. **Database Connection Error**: Ensure PostgreSQL is running and credentials in `config/database_config.yaml` are correct
-2. **Missing Data Points**: Check that equipment is running (status=True) - offline equipment doesn't generate sensor data
-3. **Incoherent Data**: Use `--reset` flag to clear all data before regenerating
+**Why**: Clean separation between user-facing data and simulator internals.
 
-## Development Guidelines
+### API-First Architecture
 
-1. Always maintain data coherency - equipment relationships must be valid
-2. Follow Haystack v3 tagging conventions
-3. Generate physically realistic data that follows building physics
-4. Log critical decisions in `knowledge/CRITICAL_DESIGN_DECISIONS.md`
-5. Create tests for new functionality in `test/` folder
-6. Document complex algorithms and relationships
+- Simulator **calls API** endpoints (not direct DB writes)
+- WebApp **calls API** endpoints
+- Single source of truth for data operations
+
+**Why**: Consistent data access, better error handling, multi-database support.
+
+### Haystack v3 Schema
+
+- Follows Project Haystack tagging conventions
+- Entity-attribute-value model
+- Tag-based filtering
+
+**Why**: Industry standard for building automation systems.
+
+## Common Tasks
+
+### Add New Simulator Endpoint
+
+1. Define endpoint: `api/src/app/api/simulator/simulator_api.py`
+2. Add service logic: `api/src/app/services/simulator_*.py`
+3. Update API client: `simulator/src/service/api_client.py`
+4. Update webapp client: `webapp/lib/api-client.ts`
+
+### Add New GUI Page
+
+1. Create page: `webapp/app/(dashboard)/[name]/page.tsx`
+2. Create components: `webapp/components/[name]/`
+3. Update navigation: `webapp/components/layout/Navigation.tsx`
+
+### Modify Database Schema
+
+1. Update schema file: `schema/*.sql`
+2. Update SQLAlchemy models: `api/src/app/model/sqlalchemy/`
+3. Rebuild databases: `docker-compose down -v && docker-compose up`
+
+## Authentication
+
+- **Production**: AWS Cognito (SSO)
+  - Users: Human login via webapp
+  - Services: Service account with machine-to-machine auth
+
+- **Local Dev**: API key fallback (for testing without Cognito)
+

@@ -1,5 +1,7 @@
+version: '3.8'
+
 services:
-  # TimescaleDB Database - Building Data Only
+  # TimescaleDB - Building Data
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: haystack-timescaledb
@@ -7,11 +9,10 @@ services:
       POSTGRES_DB: datakwip
       POSTGRES_USER: datakwip_user
       POSTGRES_PASSWORD: datakwip_password
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     ports:
       - "5432:5432"
     volumes:
-      - timescaledb_data:/var/lib/postgresql/data
+      - timescale-data:/var/lib/postgresql/data
       - ./schema/01_sql_schema_core_v2.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U datakwip_user -d datakwip"]
@@ -21,7 +22,7 @@ services:
     networks:
       - haystack-network
 
-  # PostgreSQL Database - Simulator State Only
+  # PostgreSQL - Simulator State
   statedb:
     image: postgres:15-alpine
     container_name: haystack-statedb
@@ -29,11 +30,10 @@ services:
       POSTGRES_DB: simulator_state
       POSTGRES_USER: simulator_user
       POSTGRES_PASSWORD: simulator_password
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     ports:
       - "5433:5432"
     volumes:
-      - statedb_data:/var/lib/postgresql/data
+      - state-data:/var/lib/postgresql/data
       - ./schema/02_simulator_state.sql:/docker-entrypoint-initdb.d/01_state.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U simulator_user -d simulator_state"]
@@ -43,19 +43,22 @@ services:
     networks:
       - haystack-network
 
-  # Haystack Data Simulator Service (optional - comment out if not needed)
-  simulator:
+  # API Service (db-service-layer with simulator extensions)
+  api:
     build:
-      context: .
+      context: ./api
       dockerfile: Dockerfile
-    container_name: haystack-simulator
+    container_name: haystack-api
     environment:
       DATABASE_URL: postgresql://datakwip_user:datakwip_password@timescaledb:5432/datakwip
       STATE_DB_URL: postgresql://simulator_user:simulator_password@statedb:5432/simulator_state
-      HEALTH_PORT: 8080
-      LOG_LEVEL: INFO
+      dk_env: "local"
+      MAIN_DB_POOL_SIZE: 10
+      MAIN_DB_MAX_OVERFLOW: 10
     ports:
-      - "8080:8080"
+      - "8000:8000"
+    volumes:
+      - ./api/src:/app/src:ro
     depends_on:
       timescaledb:
         condition: service_healthy
@@ -63,15 +66,54 @@ services:
         condition: service_healthy
     networks:
       - haystack-network
-    restart: unless-stopped
-    # Uncomment to override command (e.g., for testing)
-    # command: python src/main.py --check-state
+
+  # Simulator Service
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    container_name: haystack-simulator
+    environment:
+      API_URL: http://api:8000
+      SIMULATOR_ID: 1
+      API_KEY: dev-key-local-only
+      STATE_DB_URL: postgresql://simulator_user:simulator_password@statedb:5432/simulator_state
+      HEALTH_CHECK_PORT: 8080
+      SERVICE_INTERVAL_MINUTES: 15
+      BUILDING_CONFIG_PATH: config/building_config.yaml
+      DB_CONFIG_PATH: config/database_config.docker.yaml
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./simulator/src:/app/src:ro
+      - ./simulator/config:/app/config:ro
+    depends_on:
+      - api
+    networks:
+      - haystack-network
+
+  # Web Application
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: haystack-webapp
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./webapp/app:/app/app:ro
+      - ./webapp/components:/app/components:ro
+    depends_on:
+      - api
+    networks:
+      - haystack-network
 
 volumes:
-  timescaledb_data:
-    driver: local
-  statedb_data:
-    driver: local
+  timescale-data:
+  state-data:
 
 networks:
   haystack-network:

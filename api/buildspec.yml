@@ -1,0 +1,42 @@
+version: 0.2
+env:
+  secrets-manager:
+    SECRET_VALUE: "arn:aws:secretsmanager:us-east-1:032363835097:secret:prod/db-service-layer-wiZM4W"
+    DOCKER_SECRET_VALUE: "arn:aws:secretsmanager:us-east-1:032363835097:secret:prod/docker-login-gJzw4Z"
+phases:
+  pre_build:
+    commands:
+    - echo Logging in to Amazon ECR....
+    - aws --version
+    # update the following line with your own region
+    - DOCKER_HUB_USERNAME=$(echo $DOCKER_SECRET_VALUE | jq -r '.DOCKER_HUB_USERNAME')
+    - DOCKER_HUB_PASSWORD=$(echo $DOCKER_SECRET_VALUE | jq -r '.DOCKER_HUB_PASSWORD')
+    - echo $DOCKER_HUB_PASSWORD | docker login --username $DOCKER_HUB_USERNAME --password-stdin
+    - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+    - IMAGE_TAG=${COMMIT_HASH:=latest}
+    - REPOSITORY_URI=032363835097.dkr.ecr.us-east-1.amazonaws.com/db-service-layer
+  build:
+    commands:
+    - ls ${CODEBUILD_SRC_DIR}/src/app
+    - echo "$SECRET_VALUE" >> "${CODEBUILD_SRC_DIR}/src/app/config.json"
+    - echo $SECRET_VALUE
+    - echo Build started on `date`
+    - echo Building the Docker image...
+    # update the following line with the name of your own ECR repository
+    - docker build -t $REPOSITORY_URI:latest .
+    # update the following line with the URI of your own ECR repository (view the Push Commands in the console)
+    - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+    - echo Build completed on `date`
+    - echo pushing to repo
+    # update the following line with the URI of your own ECR repository
+    - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 032363835097.dkr.ecr.us-east-1.amazonaws.com
+    - docker push $REPOSITORY_URI:latest
+    - docker push $REPOSITORY_URI:$IMAGE_TAG
+    - echo Writing image definitions file...
+    #- printf '[{"ImageURI":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imageDetail.json
+    - printf '{"ImageURI":"%s"}' $REPOSITORY_URI:$IMAGE_TAG > imageDetail.json
+artifacts:
+  files:
+    - imageDetail.json

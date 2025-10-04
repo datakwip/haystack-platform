@@ -1,0 +1,16 @@
+__pycache__
+/.idea/
+/src/app/api/filter/antlr/notgit/
+/src/db_converter/config.ini
+/src/db_converter/defs.json
+/csv/
+/src/app/app.log
+/src/ess_manager/csv/
+/src/ess_manager/config.ini
+/src/app/config.json
+/app/config.json
+/src/app/config.json
+/src/config.json
+/src/app.log
+.env
+/src/config_Khalid.json

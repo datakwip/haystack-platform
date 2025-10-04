@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+json-cfg
+flake8
+pyright
+sqlalchemy
+psycopg2-binary
+antlr4-python3-runtime
+sqlalchemy-views
+urllib3
+PyJWT
+gunicorn==21.2.0
+python-dotenv
+openpyxl
