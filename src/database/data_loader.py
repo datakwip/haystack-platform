@@ -2,7 +2,7 @@
 
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
@@ -255,10 +255,196 @@ class DataLoader:
         
     def get_row_count(self) -> int:
         """Get total number of rows in time-series table.
-        
+
         Returns:
             Row count
         """
         query = f"SELECT COUNT(*) as count FROM core.{self.table_name}"
         result = self.db.execute_query(query)
         return result[0]['count'] if result else 0
+
+    def get_last_timestamp_all_points(self) -> Optional[datetime]:
+        """Get the latest timestamp across all points.
+
+        Returns:
+            Latest timestamp or None if no data exists
+        """
+        query = f"""
+            SELECT MAX(ts) as max_ts
+            FROM core.{self.table_name}
+        """
+        result = self.db.execute_query(query)
+
+        if result and result[0]['max_ts']:
+            return result[0]['max_ts']
+        return None
+
+    def get_last_totalizer_values(self) -> Dict[str, Any]:
+        """Get the last known values for all totalizers.
+
+        Returns:
+            Dictionary with totalizer values
+        """
+        totalizers = {
+            'electric_energy': 0.0,
+            'gas_volume': 0.0,
+            'water_volume': 0.0,
+            'chiller_energy': {}
+        }
+
+        # Get latest electric energy
+        query = f"""
+            SELECT v.value_n
+            FROM core.{self.table_name} v
+            JOIN core.entity_tag et ON v.entity_id = et.entity_id
+            JOIN core.tag_def td ON et.tag_id = td.id
+            WHERE td.name = 'energy'
+            AND v.entity_id IN (
+                SELECT et2.entity_id
+                FROM core.entity_tag et2
+                JOIN core.tag_def td2 ON et2.tag_id = td2.id
+                WHERE td2.name = 'elec'
+            )
+            ORDER BY v.ts DESC
+            LIMIT 1
+        """
+        result = self.db.execute_query(query)
+        if result and result[0]['value_n'] is not None:
+            totalizers['electric_energy'] = float(result[0]['value_n'])
+
+        # Get latest gas volume
+        query = f"""
+            SELECT v.value_n
+            FROM core.{self.table_name} v
+            JOIN core.entity_tag et ON v.entity_id = et.entity_id
+            JOIN core.tag_def td ON et.tag_id = td.id
+            WHERE td.name = 'volume'
+            AND v.entity_id IN (
+                SELECT et2.entity_id
+                FROM core.entity_tag et2
+                JOIN core.tag_def td2 ON et2.tag_id = td2.id
+                WHERE td2.name = 'naturalGas'
+            )
+            ORDER BY v.ts DESC
+            LIMIT 1
+        """
+        result = self.db.execute_query(query)
+        if result and result[0]['value_n'] is not None:
+            totalizers['gas_volume'] = float(result[0]['value_n'])
+
+        # Get latest water volume
+        query = f"""
+            SELECT v.value_n
+            FROM core.{self.table_name} v
+            JOIN core.entity_tag et ON v.entity_id = et.entity_id
+            JOIN core.tag_def td ON et.tag_id = td.id
+            WHERE td.name = 'volume'
+            AND v.entity_id IN (
+                SELECT et2.entity_id
+                FROM core.entity_tag et2
+                JOIN core.tag_def td2 ON et2.tag_id = td2.id
+                WHERE td2.name = 'water'
+            )
+            ORDER BY v.ts DESC
+            LIMIT 1
+        """
+        result = self.db.execute_query(query)
+        if result and result[0]['value_n'] is not None:
+            totalizers['water_volume'] = float(result[0]['value_n'])
+
+        # Get chiller energies
+        query = f"""
+            SELECT et_id.value_s as point_id, v.value_n
+            FROM core.{self.table_name} v
+            JOIN core.entity e ON v.entity_id = e.id
+            JOIN core.entity_tag et ON v.entity_id = et.entity_id
+            JOIN core.tag_def td ON et.tag_id = td.id
+            JOIN core.entity_tag et_id ON e.id = et_id.entity_id
+            JOIN core.tag_def td_id ON et_id.tag_id = td_id.id
+            WHERE td.name = 'energy'
+            AND td_id.name = 'id'
+            AND et_id.value_s LIKE 'point-chiller-%-energy'
+            AND v.ts = (
+                SELECT MAX(ts) FROM core.{self.table_name} WHERE entity_id = v.entity_id
+            )
+        """
+        result = self.db.execute_query(query)
+        for row in result:
+            point_id = row['point_id']
+            if point_id:
+                parts = point_id.split('-')
+                if len(parts) >= 3:
+                    chiller_num = int(parts[2])
+                    totalizers['chiller_energy'][chiller_num] = float(row['value_n'])
+
+        return totalizers
+
+    def detect_entities_exist(self) -> bool:
+        """Check if building entities exist in database.
+
+        Returns:
+            True if entities exist, False otherwise
+        """
+        query = """
+            SELECT COUNT(*) as count
+            FROM core.entity e
+            JOIN core.entity_tag et ON e.id = et.entity_id
+            JOIN core.tag_def td ON et.tag_id = td.id
+            WHERE td.name = 'point' AND et.value_b = true
+        """
+        result = self.db.execute_query(query)
+        count = result[0]['count'] if result else 0
+        return count > 0
+
+    def get_data_gap_ranges(self, start_time: datetime, end_time: datetime,
+                           interval_minutes: int = 15) -> List[Dict[str, datetime]]:
+        """Identify gaps in data within a time range.
+
+        Args:
+            start_time: Start of range to check
+            end_time: End of range to check
+            interval_minutes: Expected interval between data points
+
+        Returns:
+            List of dictionaries with 'start' and 'end' keys for each gap
+        """
+        query = f"""
+            SELECT DISTINCT ts
+            FROM core.{self.table_name}
+            WHERE ts >= %s AND ts <= %s
+            ORDER BY ts
+        """
+        result = self.db.execute_query(query, (start_time, end_time))
+        actual_timestamps = set(row['ts'] for row in result)
+
+        # Generate expected timestamps
+        expected_timestamps = []
+        current = start_time
+        while current <= end_time:
+            expected_timestamps.append(current)
+            current += timedelta(minutes=interval_minutes)
+
+        # Find gaps
+        gaps = []
+        gap_start = None
+
+        for ts in expected_timestamps:
+            if ts not in actual_timestamps:
+                if gap_start is None:
+                    gap_start = ts
+            else:
+                if gap_start is not None:
+                    gaps.append({
+                        'start': gap_start,
+                        'end': ts - timedelta(minutes=interval_minutes)
+                    })
+                    gap_start = None
+
+        # Close final gap if exists
+        if gap_start is not None:
+            gaps.append({
+                'start': gap_start,
+                'end': expected_timestamps[-1]
+            })
+
+        return gaps

@@ -1,3 +1,6 @@
+-- Create core schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS core;
+
 -- core.entity definition
 
 -- Drop table

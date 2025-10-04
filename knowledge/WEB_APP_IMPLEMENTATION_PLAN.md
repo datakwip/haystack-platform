@@ -1,5 +1,13 @@
 # Web Application Implementation Plan for Haystack Data Simulator
 
+**← [Back to Main README](../README.md)** | **Future Roadmap**
+
+**Status**: Future enhancement - Not yet implemented
+
+**Related Documentation**:
+- [MCP Server Guide](MCP_SERVER_IMPLEMENTATION_GUIDE.md) - MCP integration plan
+- [Service Mode](../docs/SERVICE_MODE_SUMMARY.md) - Backend service capabilities
+
 ## Overview
 This document outlines the comprehensive plan for building a web application that provides a graphical interface for all functions available in the Haystack Data Simulator, including data generation control, time series visualization, hierarchical entity exploration, and data validation.
 

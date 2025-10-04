@@ -13,26 +13,39 @@ logger = logging.getLogger(__name__)
 
 class TimeSeriesGenerator:
     """Generates realistic time-series data for building systems."""
-    
-    def __init__(self, config: Dict[str, Any], entity_map: Dict[str, int]):
+
+    def __init__(self, config: Dict[str, Any], entity_map: Dict[str, int],
+                 initial_totalizers: Optional[Dict[str, Any]] = None):
         """Initialize time-series generator.
-        
+
         Args:
             config: Building configuration dictionary
             entity_map: Mapping of entity names to database IDs
+            initial_totalizers: Optional initial totalizer values for resumption
         """
         self.config = config
         self.entity_map = entity_map
         self.random = random.Random(42)  # Reproducible random seed
         self.np_random = np.random.RandomState(42)
-        
+
         # Initialize totalizer accumulators for energy/volume meters
-        self.totalizers = {
-            'electric_energy': 0.0,  # kWh
-            'gas_volume': 0.0,       # ft³
-            'water_volume': 0.0,     # gallons
-            'chiller_energy': {}     # kWh per chiller
-        }
+        if initial_totalizers:
+            # Resume from provided totalizer values
+            self.totalizers = {
+                'electric_energy': initial_totalizers.get('electric_energy', 0.0),
+                'gas_volume': initial_totalizers.get('gas_volume', 0.0),
+                'water_volume': initial_totalizers.get('water_volume', 0.0),
+                'chiller_energy': initial_totalizers.get('chiller_energy', {})
+            }
+            logger.info(f"Resuming with totalizers: {self.totalizers}")
+        else:
+            # Start from zero
+            self.totalizers = {
+                'electric_energy': 0.0,  # kWh
+                'gas_volume': 0.0,       # ft³
+                'water_volume': 0.0,     # gallons
+                'chiller_energy': {}     # kWh per chiller
+            }
         
     def generate_historical_data(self, days: int = 30) -> pd.DataFrame:
         """Generate historical time-series data.

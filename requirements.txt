@@ -6,6 +6,9 @@ PyYAML>=6.0
 rich>=13.0.0
 SQLAlchemy>=2.0.0
 
+# Service and scheduling dependencies
+APScheduler>=3.10.0
+
 # Optional dependencies for extended functionality
 python-dateutil>=2.8.0
 pytz>=2023.3

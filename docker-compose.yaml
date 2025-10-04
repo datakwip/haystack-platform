@@ -1,0 +1,78 @@
+services:
+  # TimescaleDB Database - Building Data Only
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: haystack-timescaledb
+    environment:
+      POSTGRES_DB: datakwip
+      POSTGRES_USER: datakwip_user
+      POSTGRES_PASSWORD: datakwip_password
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./schema/01_sql_schema_core_v2.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datakwip_user -d datakwip"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - haystack-network
+
+  # PostgreSQL Database - Simulator State Only
+  statedb:
+    image: postgres:15-alpine
+    container_name: haystack-statedb
+    environment:
+      POSTGRES_DB: simulator_state
+      POSTGRES_USER: simulator_user
+      POSTGRES_PASSWORD: simulator_password
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "5433:5432"
+    volumes:
+      - statedb_data:/var/lib/postgresql/data
+      - ./schema/02_simulator_state.sql:/docker-entrypoint-initdb.d/01_state.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simulator_user -d simulator_state"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - haystack-network
+
+  # Haystack Data Simulator Service (optional - comment out if not needed)
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: haystack-simulator
+    environment:
+      DATABASE_URL: postgresql://datakwip_user:datakwip_password@timescaledb:5432/datakwip
+      STATE_DB_URL: postgresql://simulator_user:simulator_password@statedb:5432/simulator_state
+      HEALTH_PORT: 8080
+      LOG_LEVEL: INFO
+    ports:
+      - "8080:8080"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      statedb:
+        condition: service_healthy
+    networks:
+      - haystack-network
+    restart: unless-stopped
+    # Uncomment to override command (e.g., for testing)
+    # command: python src/main.py --check-state
+
+volumes:
+  timescaledb_data:
+    driver: local
+  statedb_data:
+    driver: local
+
+networks:
+  haystack-network:
+    driver: bridge

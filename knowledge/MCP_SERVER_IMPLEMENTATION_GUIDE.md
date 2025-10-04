@@ -1,5 +1,13 @@
 # MCP Server Implementation Guide for Haystack Data Simulator
 
+**← [Back to Main README](../README.md)** | **Advanced / Future Roadmap**
+
+**Status**: Future enhancement - Not yet implemented
+
+**Related Documentation**:
+- [Web App Plan](WEB_APP_IMPLEMENTATION_PLAN.md) - Web interface roadmap
+- [Service Mode](../docs/SERVICE_MODE_SUMMARY.md) - Current service capabilities
+
 ## Overview
 This document provides all implementation details needed to build an MCP (Model Context Protocol) server for the Haystack building data simulator database. The simulator generates Project Haystack compliant building automation data stored in PostgreSQL/TimescaleDB.
 

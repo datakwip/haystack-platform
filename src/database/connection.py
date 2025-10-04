@@ -124,14 +124,19 @@ class DatabaseConnection:
             )
             logger.info(f"Inserted {len(df)} records into {schema}.{table_name}")
             
-    def setup_hypertables(self):
-        """Set up TimescaleDB hypertables for time-series data."""
+    def setup_hypertables(self, value_table: str = 'values_demo', current_table: str = 'values_demo_current'):
+        """Set up TimescaleDB hypertables for time-series data.
+
+        Args:
+            value_table: Name of the value table (e.g., 'values_demo')
+            current_table: Name of the current values table (e.g., 'values_demo_current')
+        """
         queries = [
             "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;",
-            "SELECT create_hypertable('core.values_demo', 'ts', if_not_exists => TRUE);",
-            "SELECT create_hypertable('core.values_demo_current', 'ts', if_not_exists => TRUE);"
+            f"SELECT create_hypertable('core.{value_table}', 'ts', if_not_exists => TRUE);",
+            f"SELECT create_hypertable('core.{current_table}', 'ts', if_not_exists => TRUE);"
         ]
-        
+
         for query in queries:
             try:
                 self.execute_update(query)
@@ -169,49 +174,47 @@ class DatabaseConnection:
                 logger.info(f"Created organization '{org_name}' with ID {org_id}")
                 return org_id
                 
-    def reset_all_data(self):
+    def reset_all_data(self, value_table=None, current_table=None):
         """Reset all data tables to ensure coherent dataset.
-        
+
         WARNING: This will delete all entities and time-series data!
         Organization data is preserved.
+
+        Args:
+            value_table: Name of the value table (e.g., 'values_docker_test')
+            current_table: Name of the current table (e.g., 'values_docker_test_current')
         """
         logger.warning("Resetting all data tables - this will delete all entities and time-series data")
-        
-        # Core tables to reset (these should exist)
+
+        # Build list of tables to reset
+        # NOTE: simulator_state is NOT reset - it lives in a separate state database
         reset_queries = [
-            "TRUNCATE core.values_demo CASCADE;",
-            "TRUNCATE core.values_demo_current CASCADE;",
             "TRUNCATE core.entity CASCADE;",
-            "TRUNCATE core.entity_tag CASCADE;"
-        ]
-        
-        # Optional tables that may not exist depending on schema version
-        optional_reset_queries = [
+            "TRUNCATE core.entity_tag CASCADE;",
             "TRUNCATE core.org_entity_permission CASCADE;",
             "TRUNCATE core.entity_his CASCADE;"
         ]
-        
-        # Execute core resets
+
+        # Add value tables if specified
+        if value_table:
+            reset_queries.insert(0, f"TRUNCATE core.{value_table} CASCADE;")
+        if current_table:
+            reset_queries.insert(1, f"TRUNCATE core.{current_table} CASCADE;")
+
+        reset_count = 0
+        # Execute all resets (ignore if table doesn't exist)
         for query in reset_queries:
             try:
                 self.execute_update(query)
                 logger.info(f"Executed: {query}")
-            except Exception as e:
-                logger.error(f"Failed to execute reset query: {query}, Error: {e}")
-                raise
-        
-        # Execute optional resets (ignore if table doesn't exist)
-        for query in optional_reset_queries:
-            try:
-                self.execute_update(query)
-                logger.info(f"Executed: {query}")
+                reset_count += 1
             except Exception as e:
                 if "does not exist" in str(e):
-                    logger.debug(f"Optional table not found, skipping: {query}")
+                    logger.debug(f"Table not found, skipping: {query}")
                 else:
-                    logger.warning(f"Optional reset query failed: {query}, Error: {e}")
-                
-        logger.info("All data tables have been reset successfully")
+                    logger.warning(f"Reset query failed: {query}, Error: {e}")
+
+        logger.info(f"Reset complete - {reset_count} tables truncated")
     
     def close(self):
         """Close all connections in the pool."""

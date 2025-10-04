@@ -1,5 +1,11 @@
 # Critical Design Decisions and Learnings
 
+**← [Back to Main README](../README.md)** | **Developer Documentation**
+
+**Related Documentation**:
+- [Empty vs Existing DB](../docs/EMPTY_VS_EXISTING_DB.md) - Database initialization
+- [Service Mode Guide](../docs/SERVICE_MODE_SUMMARY.md) - Implementation overview
+
 ## Instructions for Maintaining This Document
 **IMPORTANT**: Always log critical design decisions, functional conclusions, and important learnings in this file. This ensures knowledge persistence across sessions and helps maintain consistent behavior.
 
@@ -149,3 +155,155 @@ SELECT AVG(v.value_n) as avg_temp
 
 ### Best Practice
 Always use table aliases in JOINs and qualify column references to avoid ambiguity, especially in complex queries with multiple tables.
+
+---
+
+## Table Naming and Configuration Flexibility
+**Date**: 2025-10-03
+**Issue**: Hardcoded table names in tests and validation scripts caused Docker testing failures
+
+### Problem Identified
+- Tests and validation scripts used hardcoded `'values_demo'` table name
+- Docker config uses organization key `docker_test` → creates `values_docker_test` tables
+- Default config uses organization key `demo` → creates `values_demo` tables
+- This mismatch caused "relation does not exist" errors during testing
+
+### Root Cause
+Table names are generated from `organization.key` in config files:
+```python
+table_name = f"values_{org_key}"
+current_table = f"values_{org_key}_current"
+```
+
+### Solution Implemented
+- Updated all test files to read table name from config instead of hardcoding
+- Updated all validation scripts to get table name from config
+- Modified config loading functions to return full config (not just database section)
+
+### Files Fixed
+1. `test/test_gap_filler.py` - Now reads `config['tables']['value_table']`
+2. `test/test_resumption.py` - Now uses configured table name
+3. `validation/validate_service_state.py` - Loads full config
+4. `validation/validate_gaps.py` - Uses table_name parameter
+5. `validation/validate_service_health.py` - Reads from config
+
+### Best Practice
+Never hardcode table names. Always read from configuration:
+```python
+db_config, building_config = load_config()
+table_name = db_config['tables']['value_table']
+```
+
+---
+
+## Timezone Handling in Validation Scripts
+**Date**: 2025-10-03
+**Issue**: TypeError when comparing timezone-aware and timezone-naive datetime objects
+
+### Problem
+PostgreSQL returns timezone-aware timestamps (e.g., `2025-10-03 18:15:00+00:00`)
+Python's `datetime.now()` returns timezone-naive timestamps
+Subtraction between them fails: `TypeError: can't subtract offset-naive and offset-aware datetimes`
+
+### Solution
+Convert both to timezone-naive before comparison:
+```python
+# Make timezone-naive for comparison
+ts_naive = ts.replace(tzinfo=None) if ts.tzinfo else ts
+now_naive = datetime.now()
+diff = (now_naive - ts_naive).total_seconds() / 60
+```
+
+### Files Fixed
+- `validation/validate_service_state.py` (2 occurrences)
+- `validation/validate_service_health.py` (2 occurrences)
+
+### Best Practice
+When comparing database timestamps with current time:
+1. Always handle both timezone-aware and timezone-naive cases
+2. Convert to consistent timezone (naive for local operations)
+3. Use `.replace(tzinfo=None)` to strip timezone info
+
+---
+
+## Reset Function Incomplete Cleanup
+**Date**: 2025-10-03
+**Issue**: `--reset` flag doesn't truncate value tables, causing data overlap
+
+### Problem Identified
+During testing, discovered that running with `--reset` flag:
+- ✅ Truncates `entity` and `entity_tag` tables
+- ❌ Does NOT truncate `values_*` tables
+- Result: Old data remains with old entity IDs, new data uses new entity IDs
+- Causes totalizer "decreases" when old and new entity IDs overlap
+
+### Manifestation
+Running tests showed "❌ Found 2 totalizer decreases!" because:
+- Old data: Entities 410-702, dates Sept 26 - Oct 3
+- New data: Entities 352-702, dates Oct 2 - Oct 3
+- Entity 697 existed in both datasets with different totalizer ranges
+- Appeared as massive decrease: 48,894.6 kWh drop
+
+### Workaround Applied
+Manual truncation before data generation:
+```sql
+TRUNCATE TABLE core.values_docker_test CASCADE;
+TRUNCATE TABLE core.values_docker_test_current CASCADE;
+```
+
+### Fix Applied (2025-10-03)
+Updated `DatabaseConnection.reset_all_data()` to accept dynamic table names:
+```python
+def reset_all_data(self, value_table=None, current_table=None):
+    """Reset all data tables to ensure coherent dataset."""
+    reset_queries = [
+        "TRUNCATE core.entity CASCADE;",
+        "TRUNCATE core.entity_tag CASCADE;",
+        "TRUNCATE core.org_entity_permission CASCADE;",
+        "TRUNCATE core.entity_his CASCADE;",
+        "TRUNCATE core.simulator_state CASCADE;"
+    ]
+    if value_table:
+        reset_queries.insert(0, f"TRUNCATE core.{value_table} CASCADE;")
+    if current_table:
+        reset_queries.insert(1, f"TRUNCATE core.{current_table} CASCADE;")
+```
+
+Updated `main.py` to pass table names from config:
+```python
+db.reset_all_data(
+    value_table=db_config['tables']['value_table'],
+    current_table=db_config['tables']['current_table']
+)
+```
+
+### Lesson Learned
+Data coherency requires complete cleanup. Partial resets lead to invalid datasets that appear correct on surface but fail validation. Always ensure reset functions are aware of dynamic table naming schemes.
+
+---
+
+## Decimal vs Float Type Mismatch
+**Date**: 2025-10-03
+**Issue**: PostgreSQL interval queries return Decimal type, Python expects float
+
+### Problem
+Gap validation query returns `interval_minutes` as `decimal.Decimal`:
+```python
+interval = row['interval_minutes']  # This is Decimal
+if abs(interval - 15.0) <= 1.0:  # TypeError: unsupported operand type(s)
+```
+
+### Solution
+Explicitly convert Decimal to float:
+```python
+interval = float(row['interval_minutes']) if row['interval_minutes'] is not None else 0.0
+```
+
+### File Fixed
+- `validation/validate_gaps.py`
+
+### Best Practice
+When using PostgreSQL's `EXTRACT(EPOCH FROM ...)` or similar time functions:
+- PostgreSQL returns numeric/decimal types
+- Python arithmetic expects float
+- Always cast to float: `float(row['column_name'])`

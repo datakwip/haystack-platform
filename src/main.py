@@ -86,7 +86,10 @@ def setup_database(db_config: Dict[str, Any]) -> tuple[DatabaseConnection, Schem
     # Setup hypertables
     console.print("[yellow]Setting up TimescaleDB hypertables...[/yellow]")
     try:
-        db.setup_hypertables()
+        db.setup_hypertables(
+            value_table=db_config['tables']['value_table'],
+            current_table=db_config['tables']['current_table']
+        )
         console.print("[green]OK[/green] Hypertables configured")
     except Exception as e:
         console.print(f"[yellow]WARNING[/yellow] Hypertable setup warning: {e}")
@@ -201,20 +204,24 @@ def generate_current_values(data_loader: DataLoader, building_config: Dict[str, 
     console.print(f"[green]OK[/green] Updated {len(current_data)} current values")
 
 
-def display_validation_results(db: DatabaseConnection) -> None:
+def display_validation_results(db: DatabaseConnection, db_config: Dict[str, Any]) -> None:
     """Display validation queries and results.
-    
+
     Args:
         db: DatabaseConnection instance
+        db_config: Database configuration dictionary
     """
     console.print("\n[bold blue]Validation Results[/bold blue]")
-    
+
+    value_table = db_config['tables']['value_table']
+    current_table = db_config['tables']['current_table']
+
     # Get row counts
     queries = {
         "Entities": "SELECT COUNT(*) as count FROM core.entity",
-        "Entity Tags": "SELECT COUNT(*) as count FROM core.entity_tag", 
-        "Time-series Records": "SELECT COUNT(*) as count FROM core.values_demo",
-        "Current Values": "SELECT COUNT(*) as count FROM core.values_demo_current"
+        "Entity Tags": "SELECT COUNT(*) as count FROM core.entity_tag",
+        "Time-series Records": f"SELECT COUNT(*) as count FROM core.{value_table}",
+        "Current Values": f"SELECT COUNT(*) as count FROM core.{current_table}"
     }
     
     table = Table(title="Database Summary")
@@ -233,13 +240,13 @@ def display_validation_results(db: DatabaseConnection) -> None:
     
     # Sample data validation
     console.print("\n[bold blue]Sample Data Validation[/bold blue]")
-    
+
     sample_queries = [
         {
             "name": "Average Zone Temperatures",
-            "query": """
-                SELECT AVG(v.value_n) as avg_temp 
-                FROM core.values_demo v
+            "query": f"""
+                SELECT AVG(v.value_n) as avg_temp
+                FROM core.{value_table} v
                 JOIN core.entity_tag et ON v.entity_id = et.entity_id
                 JOIN core.tag_def td ON et.tag_id = td.id
                 WHERE td.name = 'temp' AND v.ts > NOW() - INTERVAL '1 day'
@@ -247,14 +254,14 @@ def display_validation_results(db: DatabaseConnection) -> None:
         },
         {
             "name": "Latest Chiller Status",
-            "query": """
+            "query": f"""
                 SELECT COUNT(*) as running_chillers
-                FROM core.values_demo_current v
-                JOIN core.entity_tag et ON v.entity_id = et.entity_id  
+                FROM core.{current_table} v
+                JOIN core.entity_tag et ON v.entity_id = et.entity_id
                 JOIN core.tag_def td ON et.tag_id = td.id
                 WHERE td.name = 'status' AND v.value_b = true
                 AND et.entity_id IN (
-                    SELECT DISTINCT et2.entity_id 
+                    SELECT DISTINCT et2.entity_id
                     FROM core.entity_tag et2
                     JOIN core.tag_def td2 ON et2.tag_id = td2.id
                     WHERE td2.name = 'chiller'
@@ -290,9 +297,161 @@ def main():
                        help='Skip validation queries')
     parser.add_argument('--reset', action='store_true',
                        help='Reset all data before generating (ensures coherent dataset)')
-    
+    parser.add_argument('--service', action='store_true',
+                       help='Run in continuous service mode (generates data every 15 minutes)')
+    parser.add_argument('--catchup', action='store_true',
+                       help='Fill data gaps from last timestamp to present, then exit')
+    parser.add_argument('--check-state', action='store_true',
+                       help='Show current service state and exit')
+
     args = parser.parse_args()
-    
+
+    # Handle service mode
+    if args.service:
+        console.print("[bold blue]Starting Continuous Service Mode[/bold blue]")
+        console.print("For production deployment, use: python src/service_main.py")
+        console.print("Press Ctrl+C to stop\n")
+
+        from service.continuous_generator import ContinuousDataService
+        from service.scheduler import DataGenerationScheduler
+        from service.health_server import HealthCheckServer
+        import time
+
+        try:
+            db_config = load_config(args.db_config)
+            building_config = load_config(args.building_config)
+
+            # Initialize service
+            service = ContinuousDataService(
+                db_config,
+                building_config,
+                db_config['tables']['value_table']
+            )
+
+            # Startup
+            if not service.startup():
+                console.print("[red]Service startup failed[/red]")
+                sys.exit(1)
+
+            # Start health server
+            health_port = 8080
+            health_server = HealthCheckServer(port=health_port, health_callback=service.health_check)
+            health_server.start()
+            console.print(f"[green]Health check available at http://localhost:{health_port}/health[/green]")
+
+            # Start scheduler
+            interval_minutes = building_config['generation']['data_interval_minutes']
+            scheduler = DataGenerationScheduler(interval_minutes=interval_minutes)
+            scheduler.start(service.generate_current_interval)
+
+            console.print("[bold green]Service running![/bold green]")
+
+            # Keep running
+            while not service.shutdown_requested:
+                time.sleep(1)
+
+            # Cleanup
+            scheduler.stop()
+            health_server.stop()
+            service.shutdown()
+
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Service stopped by user[/yellow]")
+            sys.exit(0)
+
+        return
+
+    # Handle check-state mode
+    if args.check_state:
+        db_config = load_config(args.db_config)
+        db = DatabaseConnection(db_config['database'])
+
+        from service.state_manager import StateManager
+        state_mgr = StateManager(db)
+
+        console.print("\n[bold blue]Current Service State[/bold blue]")
+        state = state_mgr.get_service_state()
+
+        if state:
+            console.print(f"Status: {state.get('status')}")
+            console.print(f"Last Run: {state.get('last_run_timestamp')}")
+            console.print(f"Updated: {state.get('updated_at')}")
+            if state.get('error_message'):
+                console.print(f"[red]Error: {state['error_message']}[/red]")
+
+            totalizers = state.get('totalizers', {})
+            if totalizers:
+                console.print("\nTotalizer States:")
+                console.print(f"  Electric Energy: {totalizers.get('electric_energy', 0):.1f} kWh")
+                console.print(f"  Gas Volume: {totalizers.get('gas_volume', 0):.0f} ft³")
+                console.print(f"  Water Volume: {totalizers.get('water_volume', 0):.0f} gal")
+        else:
+            console.print("[yellow]No service state found[/yellow]")
+
+        db.close()
+        return
+
+    # Handle catchup mode
+    if args.catchup:
+        console.print("[bold blue]Gap Fill Mode[/bold blue]")
+        db_config = load_config(args.db_config)
+        building_config = load_config(args.building_config)
+
+        db = DatabaseConnection(db_config['database'])
+
+        from service.state_manager import StateManager
+        from service.gap_filler import GapFiller
+        from generators.entities import EntityGenerator
+
+        state_mgr = StateManager(db)
+
+        # Load or create entities
+        data_loader = DataLoader(db, db_config['tables']['value_table'])
+        entities_exist = data_loader.detect_entities_exist()
+
+        if not entities_exist:
+            console.print("[red]No entities found. Run with --entities-only first[/red]")
+            sys.exit(1)
+
+        # Load entity map
+        query = """
+            SELECT e.id, et_id.value_s as entity_name
+            FROM core.entity e
+            JOIN core.entity_tag et_id ON e.id = et_id.entity_id
+            JOIN core.tag_def td_id ON et_id.tag_id = td_id.id
+            WHERE td_id.name = 'id'
+        """
+        result = db.execute_query(query)
+        entity_map = {row['entity_name']: row['id'] for row in result if row['entity_name']}
+
+        # Calculate gap
+        gap_start, gap_end, num_intervals = state_mgr.calculate_gap(db_config['tables']['value_table'])
+
+        if num_intervals == 0:
+            console.print("[green]No gaps detected - data is current[/green]")
+            db.close()
+            return
+
+        console.print(f"Gap detected: {num_intervals} intervals from {gap_start} to {gap_end}")
+
+        # Get totalizers
+        totalizers = state_mgr.get_totalizer_states(db_config['tables']['value_table'])
+        console.print(f"Resuming from totalizers: {totalizers}")
+
+        # Fill gap
+        gap_filler = GapFiller(db, building_config, entity_map, db_config['tables']['value_table'])
+        success = gap_filler.fill_gap_incremental(gap_start, gap_end, totalizers)
+
+        if success:
+            console.print("[green]Gap filled successfully[/green]")
+        else:
+            console.print("[red]Gap fill failed[/red]")
+            sys.exit(1)
+
+        db.close()
+        return
+
+    # Continue with batch mode (original behavior)
     try:
         # Load configurations
         console.print("[bold green]Haystack Building Data Simulator[/bold green]")
@@ -308,7 +467,10 @@ def main():
         if args.reset:
             console.print("[bold yellow]RESETTING ALL DATA[/bold yellow]")
             console.print("[yellow]This will delete all entities and time-series data![/yellow]")
-            db.reset_all_data()
+            db.reset_all_data(
+                value_table=db_config['tables']['value_table'],
+                current_table=db_config['tables']['current_table']
+            )
             console.print("[green]OK[/green] Data reset complete")
         
         # Generate entities
@@ -323,7 +485,7 @@ def main():
         
         # Validation
         if not args.skip_validation:
-            display_validation_results(db)
+            display_validation_results(db, db_config)
         
         console.print("\n[bold green]SUCCESS: Data generation completed successfully![/bold green]")
         
