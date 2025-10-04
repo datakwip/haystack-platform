@@ -6,6 +6,11 @@ PyYAML>=6.0
 rich>=13.0.0
 SQLAlchemy>=2.0.0
 
+# API and service dependencies
+FastAPI>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+
 # Service and scheduling dependencies
 APScheduler>=3.10.0
 

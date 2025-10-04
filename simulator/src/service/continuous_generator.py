@@ -269,3 +269,183 @@ class ContinuousDataService:
                 entity_map[row['entity_name']] = row['id']
 
         return entity_map
+
+    # Control methods for API
+
+    def start(self) -> bool:
+        """Start the simulator if not already running.
+
+        Returns:
+            True if started successfully, False otherwise
+        """
+        if self.running:
+            logger.warning("Simulator is already running")
+            return False
+
+        try:
+            # If service hasn't been initialized yet, run startup
+            if not self.data_db or not self.state_db:
+                return self.startup()
+
+            # Otherwise, just mark as running
+            self.running = True
+            self.shutdown_requested = False
+
+            if self.state_manager:
+                self.state_manager.save_service_state(status='running')
+
+            logger.info("Simulator started")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to start simulator: {e}")
+            return False
+
+    def stop(self) -> bool:
+        """Stop the simulator gracefully.
+
+        Returns:
+            True if stopped successfully, False otherwise
+        """
+        if not self.running:
+            logger.warning("Simulator is not running")
+            return False
+
+        try:
+            self.running = False
+            self.shutdown_requested = True
+
+            if self.state_manager:
+                self.state_manager.save_service_state(status='stopped')
+
+            logger.info("Simulator stopped")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to stop simulator: {e}")
+            return False
+
+    def pause(self) -> bool:
+        """Pause the simulator temporarily without full shutdown.
+
+        Returns:
+            True if paused successfully, False otherwise
+        """
+        if not self.running:
+            logger.warning("Simulator is not running, cannot pause")
+            return False
+
+        try:
+            self.running = False
+
+            if self.state_manager:
+                self.state_manager.save_service_state(status='paused')
+
+            logger.info("Simulator paused")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to pause simulator: {e}")
+            return False
+
+    def reset(self, clear_data: bool = False) -> bool:
+        """Reset simulator state and optionally clear generated data.
+
+        Args:
+            clear_data: If True, clear all generated time-series data
+
+        Returns:
+            True if reset successfully, False otherwise
+        """
+        try:
+            # Stop if running
+            was_running = self.running
+            if self.running:
+                self.stop()
+
+            # Reset state
+            if self.state_manager:
+                # Reset totalizers to zero
+                zero_totalizers = {
+                    'electric_energy': 0.0,
+                    'gas_volume': 0.0,
+                    'water_volume': 0.0,
+                    'chiller_energy': {}
+                }
+
+                self.state_manager.save_service_state(
+                    status='initialized',
+                    last_run_ts=None,
+                    totalizers=zero_totalizers,
+                    error_message=None
+                )
+
+            # Optionally clear data
+            if clear_data and self.data_db:
+                logger.info("Clearing generated data...")
+                try:
+                    # Truncate value tables
+                    truncate_queries = [
+                        f"TRUNCATE TABLE core.{self.value_table} CASCADE;",
+                        f"TRUNCATE TABLE core.{self.value_table}_current CASCADE;"
+                    ]
+
+                    for query in truncate_queries:
+                        try:
+                            self.data_db.execute_update(query)
+                        except Exception as e:
+                            logger.warning(f"Failed to truncate table: {e}")
+
+                    logger.info("Data cleared successfully")
+
+                except Exception as e:
+                    logger.error(f"Failed to clear data: {e}")
+                    return False
+
+            # Restart if it was running
+            if was_running:
+                return self.start()
+
+            logger.info(f"Simulator reset{' with data cleared' if clear_data else ''}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to reset simulator: {e}")
+            return False
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current generation metrics and statistics.
+
+        Returns:
+            Dictionary with metrics data
+        """
+        metrics = {
+            'running': self.running,
+            'entity_count': len(self.entity_map),
+            'value_table': self.value_table
+        }
+
+        if self.state_manager:
+            try:
+                state = self.state_manager.get_service_state()
+                if state:
+                    metrics['status'] = state.get('status')
+                    metrics['last_run'] = state.get('last_run_timestamp')
+                    metrics['totalizers'] = state.get('totalizers')
+                    metrics['error_message'] = state.get('error_message')
+
+            except Exception as e:
+                logger.error(f"Failed to get state metrics: {e}")
+                metrics['metrics_error'] = str(e)
+
+        # Get count of generated points (if possible)
+        if self.data_db:
+            try:
+                count_query = f"SELECT COUNT(*) as count FROM core.{self.value_table}"
+                result = self.data_db.execute_query(count_query)
+                if result:
+                    metrics['total_points'] = result[0]['count']
+            except Exception as e:
+                logger.warning(f"Failed to get point count: {e}")
+
+        return metrics

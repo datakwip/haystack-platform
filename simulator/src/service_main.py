@@ -8,6 +8,8 @@ import logging
 import sys
 import os
 import yaml
+import threading
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 
@@ -17,6 +19,11 @@ sys.path.append(str(Path(__file__).parent))
 from service.continuous_generator import ContinuousDataService
 from service.scheduler import DataGenerationScheduler
 from service.health_server import HealthCheckServer
+from service.activity_logger import ActivityLogger
+from api.simulator_api import create_app
+
+# Import uvicorn for running FastAPI
+import uvicorn
 
 # Configure logging
 logging.basicConfig(
@@ -116,9 +123,13 @@ def load_config_with_env(config_path: str) -> Dict[str, Any]:
 
 def main():
     """Main service entry point."""
+    start_time = datetime.now()
+
     logger.info("=" * 60)
     logger.info("Haystack Building Data Simulator - Continuous Service")
     logger.info("=" * 60)
+
+    api_server_thread = None
 
     try:
         # Load configurations
@@ -134,12 +145,14 @@ def main():
 
         # Get service configuration from environment
         health_port = int(os.getenv('HEALTH_CHECK_PORT', '8080'))
+        api_port = int(os.getenv('API_PORT', '8080'))  # Same as health port for now
         interval_minutes = int(os.getenv('SERVICE_INTERVAL_MINUTES',
                                         building_config['generation']['data_interval_minutes']))
 
         logger.info(f"Service configuration:")
         logger.info(f"  Database: {db_config['database']['host']}:{db_config['database']['port']}/{db_config['database']['database']}")
-        logger.info(f"  Health check port: {health_port}")
+        logger.info(f"  State DB: {db_config['state_database']['host']}:{db_config['state_database']['port']}/{db_config['state_database']['database']}")
+        logger.info(f"  API port: {api_port}")
         logger.info(f"  Data interval: {interval_minutes} minutes")
 
         # Initialize service
@@ -152,13 +165,38 @@ def main():
             logger.error("Service startup failed")
             sys.exit(1)
 
-        # Start health check server
-        logger.info(f"Starting health check server on port {health_port}...")
-        health_server = HealthCheckServer(
-            port=health_port,
-            health_callback=service.health_check
+        # Initialize activity logger (requires state_db to be initialized)
+        logger.info("Initializing activity logger...")
+        activity_logger = ActivityLogger(service.state_db)
+        activity_logger.log_start({
+            'value_table': value_table,
+            'interval_minutes': interval_minutes
+        })
+
+        # Create FastAPI app
+        logger.info("Creating FastAPI application...")
+        app = create_app(
+            simulator_service=service,
+            state_db=service.state_db,
+            activity_logger=activity_logger,
+            start_time=start_time
         )
-        health_server.start()
+
+        # Start FastAPI server in a background thread
+        logger.info(f"Starting API server on port {api_port}...")
+
+        def run_api_server():
+            """Run uvicorn server in background thread."""
+            uvicorn.run(
+                app,
+                host="0.0.0.0",
+                port=api_port,
+                log_level="info",
+                access_log=False  # Reduce noise
+            )
+
+        api_server_thread = threading.Thread(target=run_api_server, daemon=True)
+        api_server_thread.start()
 
         # Start scheduler
         logger.info("Starting data generation scheduler...")
@@ -167,8 +205,8 @@ def main():
 
         logger.info("=" * 60)
         logger.info("Service started successfully!")
-        logger.info(f"Health check: http://0.0.0.0:{health_port}/health")
-        logger.info(f"Status: http://0.0.0.0:{health_port}/status")
+        logger.info(f"API Server: http://0.0.0.0:{api_port}/api/health")
+        logger.info(f"API Docs: http://0.0.0.0:{api_port}/docs")
         logger.info("Press Ctrl+C to stop")
         logger.info("=" * 60)
 
@@ -179,8 +217,8 @@ def main():
 
         # Graceful shutdown
         logger.info("Shutting down...")
+        activity_logger.log_stop(reason="Graceful shutdown")
         scheduler.stop()
-        health_server.stop()
         service.shutdown()
 
         logger.info("Service stopped successfully")

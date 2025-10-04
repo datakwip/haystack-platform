@@ -3,7 +3,7 @@
 
 # TimescaleDB - Building Data (entities, tags, time-series)
 database:
-  host: localhost        # Use 'timescaledb' if running simulator inside docker
+  host: timescaledb      # Docker service name
   port: 5432
   database: datakwip
   user: datakwip_user
@@ -11,8 +11,8 @@ database:
 
 # PostgreSQL - Simulator State (operational state only)
 state_database:
-  host: localhost        # Use 'statedb' if running simulator inside docker
-  port: 5433
+  host: statedb          # Docker service name
+  port: 5432             # Internal Docker port
   database: simulator_state
   user: simulator_user
   password: simulator_password

@@ -3,7 +3,7 @@ WORKDIR /code
 COPY ./requirements.txt /code/requirements.txt
 COPY ./setup.py /code/setup.py
 #COPY ./gunicorn.conf.py /code/gunicorn.conf.py
-COPY ./src/app/config.json /code/config.json
+#COPY ./src/app/config.json /code/config.json
 COPY ./src/app /code/app
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 #CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8087", "--log-level", "critical"]
