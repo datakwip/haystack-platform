@@ -1,5 +1,15 @@
 # Claude Code Assistant Instructions - Haystack Platform
 
+## ⚠️ Current Status
+
+**Monorepo Structure:** ✅ Complete
+**API Integration:** ⏳ Pending
+**Authentication:** ⏳ Pending
+
+👉 **See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for detailed roadmap and next steps**
+
+---
+
 ## Project Overview
 
 This is a **monorepo** containing the complete Haystack Building Data Platform:
