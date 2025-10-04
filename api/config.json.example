@@ -1,0 +1,20 @@
+{
+  "local": {
+    "dbUrl": "postgresql://datakwip_user:datakwip_password@timescaledb:5432/datakwip",
+    "loadDataFromCsv": false,
+    "logLevel": "info",
+    "dbScheme": "public",
+    "dbUrlGrafanaConnector": "postgresql://datakwip_user:datakwip_password@timescaledb:5432/datakwip",
+    "app_client_id": "local-dev-no-auth",
+    "user_pool_id": "local-dev-no-auth"
+  },
+  "production": {
+    "dbUrl": "postgresql://USERNAME:PASSWORD@HOST:PORT/DATABASE?sslmode=require",
+    "loadDataFromCsv": false,
+    "logLevel": "info",
+    "dbScheme": "SCHEMA_NAME",
+    "dbUrlGrafanaConnector": "postgresql://USERNAME:PASSWORD@HOST:PORT/DATABASE?sslmode=require",
+    "app_client_id": "YOUR_COGNITO_APP_CLIENT_ID",
+    "user_pool_id": "YOUR_COGNITO_USER_POOL_ID"
+  }
+}

@@ -14,3 +14,4 @@ __pycache__
 /src/app.log
 .env
 /src/config_Khalid.json
+config.json

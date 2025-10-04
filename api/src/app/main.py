@@ -93,7 +93,7 @@ for config in config_service.available_configs:
         else:
             logger.warning(f"Failed to initialize secondary database {config['key']}: {str(e)}. Continuing without it.")
 # tag_def_parents_model.create_views(database.get_engine())
-Base.metadata.create_all(bind=database.get_engine())
+# Base.metadata.create_all(bind=database.get_engine())  # Schema already created by SQL initialization files
 
 values_tables.getMapOfValueTables(database.get_local_session())
 core_renu_table.getMapOfCoreRenuTable(database.get_local_session())

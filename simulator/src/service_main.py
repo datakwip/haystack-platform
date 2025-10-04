@@ -173,6 +173,9 @@ def main():
             'interval_minutes': interval_minutes
         })
 
+        # Attach activity logger to service for generation event logging
+        service.activity_logger = activity_logger
+
         # Create FastAPI app
         logger.info("Creating FastAPI application...")
         app = create_app(

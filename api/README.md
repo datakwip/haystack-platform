@@ -1,3 +1,18 @@
+# Configuration
+
+## ⚠️ Important: config.json Security
+
+**DO NOT commit production credentials to this repository!**
+
+1. Copy `config.json.example` to `config.json`
+2. Update `config.json` with your local or production credentials
+3. `config.json` is already in `.gitignore` and will not be committed
+
+For local Docker development, the default `config.json` uses:
+- Environment: `local`
+- Database: TimescaleDB container (`timescaledb:5432`)
+- Schema: `public`
+
 # Installation
 To install this tool as a package into Python virtual environment:
 

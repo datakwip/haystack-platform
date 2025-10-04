@@ -26,17 +26,19 @@ class ContinuousDataService:
     """Manages continuous data generation service lifecycle."""
 
     def __init__(self, db_config: Dict[str, Any], building_config: Dict[str, Any],
-                 value_table: str = 'values_demo'):
+                 value_table: str = 'values_demo', activity_logger=None):
         """Initialize continuous data service.
 
         Args:
             db_config: Database configuration (includes 'database' and 'state_database' keys)
             building_config: Building configuration
             value_table: Name of the values table
+            activity_logger: Optional ActivityLogger instance for event logging
         """
         self.db_config = db_config
         self.building_config = building_config
         self.value_table = value_table
+        self.activity_logger = activity_logger
 
         # Initialize components
         self.data_db: Optional[DatabaseConnection] = None  # TimescaleDB - building data
@@ -191,6 +193,17 @@ class ContinuousDataService:
                 last_run_ts=aligned_time,
                 totalizers=ts_gen.totalizers
             )
+
+            # Log generation event
+            if self.activity_logger:
+                try:
+                    self.activity_logger.log_generation(
+                        interval=aligned_time,
+                        point_count=len(data_points),
+                        entity_count=len(self.entity_map)
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to log generation event: {e}")
 
             logger.info(f"Successfully generated {len(data_points)} data points for {aligned_time}")
             return True
