@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.responses import JSONResponse
 import uvicorn
 import asyncio
 import threading
@@ -39,7 +40,7 @@ import logging
 from app.model.sqlalchemy import values_tables
 from app.model.sqlalchemy import core_ess_table
 from app.model.sqlalchemy import core_renu_table
-from app.model.sqlalchemy import test_values
+from app.model.sqlalchemy import dynamic_value_tables
 
 lg.logger(
     fileName="app.log",
@@ -98,7 +99,7 @@ for config in config_service.available_configs:
 values_tables.getMapOfValueTables(database.get_local_session())
 core_renu_table.getMapOfCoreRenuTable(database.get_local_session())
 core_ess_table.getMapOfCoreEssTable(database.get_local_session())
-test_values.getMapOfTestValuesTable(database.get_local_session())
+dynamic_value_tables.getMapOfTestValuesTable(database.get_local_session())
 
 load_data_from_csv = config_service.load_data_from_csv
 if load_data_from_csv:
@@ -117,6 +118,13 @@ async def db_session_middleware(request: Request, call_next):
         request.state.user_id = 0 if "/health" in str(request.url) or  "/authorize/token" in str(request.url)  else user_service.get_current_user(request, request.state.db, config_service.default_user)
         request.state.default_user_id = config_service.default_user
         response = await call_next(request)
+        response.headers["dq-request-id"] = request_id
+    except HTTPException as http_exc:
+        # Convert HTTP exceptions to proper JSON responses
+        response = JSONResponse(
+            status_code=http_exc.status_code,
+            content={"detail": http_exc.detail}
+        )
         response.headers["dq-request-id"] = request_id
     except Exception as e:
         logger.error({"request_id": request_id, "detail": str(e)})

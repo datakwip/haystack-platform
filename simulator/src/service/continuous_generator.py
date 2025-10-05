@@ -85,11 +85,18 @@ class ContinuousDataService:
             if not entities_exist:
                 logger.info("No entities found - generating building entities...")
                 schema = SchemaSetup(self.data_db)
-                org_id = schema.initialize_organization(
+                org_id, org_key = schema.initialize_organization(
                     self.db_config['organization']['name'],
                     self.db_config['organization']['key']
                 )
                 schema.create_value_tables(self.db_config['organization']['key'])
+
+                # Ensure test user exists for simulator org (with safety check)
+                try:
+                    schema.initialize_test_user(org_id, org_key, "test@datakwip.local")
+                    logger.info("Test user verified/created for testing")
+                except ValueError as e:
+                    logger.warning(f"Test user not created: {e}")
 
                 entity_gen = EntityGenerator(schema, self.building_config)
                 self.entity_map = entity_gen.generate_all_entities()

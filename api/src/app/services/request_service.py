@@ -1,4 +1,4 @@
-from fastapi import Request
+from fastapi import Request, HTTPException
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,4 +11,18 @@ def get_token(header):
     return header[len(PREFIX):]
 
 def get_auth_token(request: Request):
-    return get_token(request.headers["Authorization"])
+    """
+    Extract and validate the Authorization header from the request.
+
+    Returns the token string if valid.
+    Raises HTTPException(401) if Authorization header is missing.
+    """
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header required"
+        )
+
+    return get_token(auth_header)

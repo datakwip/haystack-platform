@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test Report - 20251004_210104</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .stat { padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-passed { background: #d4edda; color: #155724; }
+        .stat-failed { background: #f8d7da; color: #721c24; }
+        .stat-error { background: #fff3cd; color: #856404; }
+        .stat-total { background: #d1ecf1; color: #0c5460; }
+        .stat-value { font-size: 36px; font-weight: bold; }
+        .stat-label { font-size: 14px; margin-top: 5px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .test-pass { border-left: 4px solid #28a745; }
+        .test-fail { border-left: 4px solid #dc3545; }
+        .test-error { border-left: 4px solid #ffc107; }
+        .test-header { font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-right: 5px; }
+        .badge-pass { background: #28a745; color: white; }
+        .badge-fail { background: #dc3545; color: white; }
+        .badge-error { background: #ffc107; color: black; }
+        .badge-auth { background: #6c757d; color: white; }
+        .details { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 12px; }
+        .request, .response { margin: 10px 0; }
+        .label { font-weight: bold; color: #495057; }
+        pre { margin: 5px 0; white-space: pre-wrap; word-wrap: break-word; }
+        .meta { color: #6c757d; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Test Report</h1>
+        <div class="meta">
+            <p><strong>Run ID:</strong> 20251004_210104</p>
+            <p><strong>Start Time:</strong> 2025-10-04T21:01:04.711743</p>
+            <p><strong>API URL:</strong> http://localhost:8000</p>
+        </div>
+
+        <div class="summary">
+            <div class="stat stat-total">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat stat-passed">
+                <div class="stat-value">6</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat stat-failed">
+                <div class="stat-value">2</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat stat-error">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Errors</div>
+            </div>
+        </div>
+
+        <h2>Test Results</h2>
+
+        <div class="test test-pass">
+            <div class="test-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                Health Check
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/health<br>
+                    Expected Status: 200 | Actual: 200<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (12.45ms):</div>
+                <div class="details">
+                    Status: 200<br>
+                    Body: <pre>{
+  "status": "ok"
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-pass">
+            <div class="test-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                Database Health Check
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/health/databases<br>
+                    Expected Status: 200 | Actual: 200<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (6.02ms):</div>
+                <div class="details">
+                    Status: 200<br>
+                    Body: <pre>{
+  "overall_status": "healthy",
+  "databases": [
+    {
+      "key": "local",
+      "is_primary": true,
+      "status": "healthy",
+      "error": null
+    }
+  ],
+  "total_databases": 1,
+  "healthy_databases": 1,
+  "config_keys": [
+    "local"
+  ],
+  "available_config_keys": [
+    "local"
+  ]
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-pass">
+            <div class="test-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                List Entities
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/entity<br>
+                    Expected Status: 200 | Actual: 200<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (41.05ms):</div>
+                <div class="details">
+                    Status: 200<br>
+                    Body: <pre>[
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 1,
+        "entity_id": 1,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Downtown Office Tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 2,
+        "entity_id": 1,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 3,
+        "entity_id": 1,
+        "tag_id": 3
+      },
+      {
+        "value_n": 150000,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 4,
+        "entity_id": 1,
+        "tag_id": 4
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "ft\u00b2",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 5,
+        "entity_id": 1,
+        "tag_id": 5
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "123 Business St, Metro City, State 12345",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 6,
+        "entity_id": 1,
+        "tag_id": 6
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "America/New_York",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 7,
+        "entity_id": 1,
+        "tag_id": 7
+      },
+      {
+        "value_n": 2018,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 8,
+        "entity_id": 1,
+        "tag_id": 8
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "office",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 9,
+        "entity_id": 1,
+        "tag_id": 9
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "commercial",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 10,
+        "entity_id": 1,
+        "tag_id": 10
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "weather-metro-city",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 11,
+        "entity_id": 1,
+        "tag_id": 11
+      },
+      {
+        "value_n": 12,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 12,
+        "entity_id": 1,
+        "tag_id": 12
+      }
+    ],
+    "id": 1
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-chiller-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 13,
+        "entity_id": 2,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Chiller #1 - Primary",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 14,
+        "entity_id": 2,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 15,
+        "entity_id": 2,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 16,
+        "entity_id": 2,
+        "tag_id": 14
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 17,
+        "entity_id": 2,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 18,
+        "entity_id": 2,
+        "tag_id": 16
+      },
+      {
+        "value_n": 400,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 19,
+        "entity_id": 2,
+        "tag_id": 17
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "tonRefrig",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 20,
+        "entity_id": 2,
+        "tag_id": 18
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Carrier",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 21,
+        "entity_id": 2,
+        "tag_id": 19
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "30XA0404",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 22,
+        "entity_id": 2,
+        "tag_id": 20
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "2018-03-15",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 23,
+        "entity_id": 2,
+        "tag_id": 21
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 24,
+        "entity_id": 2,
+        "tag_id": 22
+      }
+    ],
+    "id": 2
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-chiller-2",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 25,
+        "entity_id": 3,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Chiller #2 - Backup",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 26,
+        "entity_id": 3,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 27,
+        "entity_id": 3,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 28,
+        "entity_id": 3,
+        "tag_id": 14
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 29,
+        "entity_id": 3,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 30,
+        "entity_id": 3,
+        "tag_id": 16
+      },
+      {
+        "value_n": 400,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 31,
+        "entity_id": 3,
+        "tag_id": 17
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "tonRefrig",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 32,
+        "entity_id": 3,
+        "tag_id": 18
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Carrier",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 33,
+        "entity_id": 3,
+        "tag_id": 19
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "30XA0404",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 34,
+        "entity_id": 3,
+        "tag_id": 20
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "2018-03-15",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 35,
+        "entity_id": 3,
+        "tag_id": 21
+      },
+      {
+        "value_n": null,
+        "value_b": false,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 36,
+        "entity_id": 3,
+        "tag_id": 22
+      }
+    ],
+    "id": 3
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 37,
+        "entity_id": 4,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "AHU-1 Floors 1-3",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 38,
+        "entity_id": 4,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 39,
+        "entity_id": 4,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 40,
+        "entity_id": 4,
+        "tag_id": 23
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 41,
+        "entity_id": 4,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 42,
+        "entity_id": 4,
+        "tag_id": 24
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Trane",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 43,
+        "entity_id": 4,
+        "tag_id": 19
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Voyager",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 44,
+        "entity_id": 4,
+        "tag_id": 20
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-chiller-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 45,
+        "entity_id": 4,
+        "tag_id": 25
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "1-3",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 46,
+        "entity_id": 4,
+        "tag_id": 26
+      },
+      {
+        "value_n": 1,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 47,
+        "entity_id": 4,
+        "tag_id": 27
+      },
+      {
+        "value_n": 3,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 48,
+        "entity_id": 4,
+        "tag_id": 28
+      }
+    ],
+    "id": 4
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-2",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 49,
+        "entity_id": 5,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "AHU-2 Floors 4-6",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 50,
+        "entity_id": 5,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 51,
+        "entity_id": 5,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 52,
+        "entity_id": 5,
+        "tag_id": 23
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 53,
+        "entity_id": 5,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 54,
+        "entity_id": 5,
+        "tag_id": 24
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Trane",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 55,
+        "entity_id": 5,
+        "tag_id": 19
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Voyager",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 56,
+        "entity_id": 5,
+        "tag_id": 20
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-chiller-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 57,
+        "entity_id": 5,
+        "tag_id": 25
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "4-6",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 58,
+        "entity_id": 5,
+        "tag_id": 26
+      },
+      {
+        "value_n": 4,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 59,
+        "entity_id": 5,
+        "tag_id": 27
+      },
+      {
+        "value_n": 6,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 60,
+        "entity_id": 5,
+        "tag_id": 28
+      }
+    ],
+    "id": 5
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-3",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 61,
+        "entity_id": 6,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "AHU-3 Floors 7-9",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 62,
+        "entity_id": 6,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 63,
+        "entity_id": 6,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 64,
+        "entity_id": 6,
+        "tag_id": 23
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 65,
+        "entity_id": 6,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 66,
+        "entity_id": 6,
+        "tag_id": 24
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Trane",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 67,
+        "entity_id": 6,
+        "tag_id": 19
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Voyager",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 68,
+        "entity_id": 6,
+        "tag_id": 20
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-chiller-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 69,
+        "entity_id": 6,
+        "tag_id": 25
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "7-9",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 70,
+        "entity_id": 6,
+        "tag_id": 26
+      },
+      {
+        "value_n": 7,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 71,
+        "entity_id": 6,
+        "tag_id": 27
+      },
+      {
+        "value_n": 9,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 72,
+        "entity_id": 6,
+        "tag_id": 28
+      }
+    ],
+    "id": 6
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-4",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 73,
+        "entity_id": 7,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "AHU-4 Floors 10-12",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 74,
+        "entity_id": 7,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 75,
+        "entity_id": 7,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 76,
+        "entity_id": 7,
+        "tag_id": 23
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 77,
+        "entity_id": 7,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 78,
+        "entity_id": 7,
+        "tag_id": 24
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Trane",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 79,
+        "entity_id": 7,
+        "tag_id": 19
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "Voyager",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 80,
+        "entity_id": 7,
+        "tag_id": 20
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-chiller-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 81,
+        "entity_id": 7,
+        "tag_id": 25
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "10-12",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 82,
+        "entity_id": 7,
+        "tag_id": 26
+      },
+      {
+        "value_n": 10,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 83,
+        "entity_id": 7,
+        "tag_id": 27
+      },
+      {
+        "value_n": 12,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 84,
+        "entity_id": 7,
+        "tag_id": 28
+      }
+    ],
+    "id": 7
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-vav-1-north",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 85,
+        "entity_id": 8,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "VAV-1N Floor 1 North",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 86,
+        "entity_id": 8,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 87,
+        "entity_id": 8,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 88,
+        "entity_id": 8,
+        "tag_id": 29
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 89,
+        "entity_id": 8,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 90,
+        "entity_id": 8,
+        "tag_id": 30
+      },
+      {
+        "value_n": 1,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 91,
+        "entity_id": 8,
+        "tag_id": 31
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "north",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 92,
+        "entity_id": 8,
+        "tag_id": 32
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 93,
+        "entity_id": 8,
+        "tag_id": 33
+      },
+      {
+        "value_n": 800,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 94,
+        "entity_id": 8,
+        "tag_id": 34
+      },
+      {
+        "value_n": 0.3,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 95,
+        "entity_id": 8,
+        "tag_id": 35
+      }
+    ],
+    "id": 8
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-vav-1-south",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 96,
+        "entity_id": 9,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "VAV-1S Floor 1 South",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 97,
+        "entity_id": 9,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 98,
+        "entity_id": 9,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 99,
+        "entity_id": 9,
+        "tag_id": 29
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 100,
+        "entity_id": 9,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 101,
+        "entity_id": 9,
+        "tag_id": 30
+      },
+      {
+        "value_n": 1,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 102,
+        "entity_id": 9,
+        "tag_id": 31
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "south",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 103,
+        "entity_id": 9,
+        "tag_id": 32
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 104,
+        "entity_id": 9,
+        "tag_id": 33
+      },
+      {
+        "value_n": 800,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 105,
+        "entity_id": 9,
+        "tag_id": 34
+      },
+      {
+        "value_n": 0.3,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 106,
+        "entity_id": 9,
+        "tag_id": 35
+      }
+    ],
+    "id": 9
+  },
+  {
+    "tags": [
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-vav-1-east",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 107,
+        "entity_id": 10,
+        "tag_id": 1
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "VAV-1E Floor 1 East",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 108,
+        "entity_id": 10,
+        "tag_id": 2
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 109,
+        "entity_id": 10,
+        "tag_id": 13
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 110,
+        "entity_id": 10,
+        "tag_id": 29
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "site-downtown-tower",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 111,
+        "entity_id": 10,
+        "tag_id": 15
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "equip-ahu-1",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 112,
+        "entity_id": 10,
+        "tag_id": 30
+      },
+      {
+        "value_n": 1,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 113,
+        "entity_id": 10,
+        "tag_id": 31
+      },
+      {
+        "value_n": null,
+        "value_b": null,
+        "value_s": "east",
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 114,
+        "entity_id": 10,
+        "tag_id": 32
+      },
+      {
+        "value_n": null,
+        "value_b": true,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 115,
+        "entity_id": 10,
+        "tag_id": 33
+      },
+      {
+        "value_n": 800,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 116,
+        "entity_id": 10,
+        "tag_id": 34
+      },
+      {
+        "value_n": 0.3,
+        "value_b": null,
+        "value_s": null,
+        "value_ts": null,
+        "value_list": null,
+        "value_dict": null,
+        "value_ref": null,
+        "value_enum": null,
+        "id": 117,
+        "entity_id": 10,
+        "tag_id": 35
+      }
+    ],
+    "id": 10
+  }
+]</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-fail">
+            <div class="test-header">
+                <span class="badge badge-fail">FAIL</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                Create Entity
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>POST</strong> http://localhost:8000/entity<br>
+                    Expected Status: 200 | Actual: 403<br>
+                    Body: <pre>{
+  "org_id": 1,
+  "tags": []
+}</pre><br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (24.84ms):</div>
+                <div class="details">
+                    Status: 403<br>
+                    Body: <pre>{
+  "detail": {
+    "errors": [
+      {
+        "msg": "the client is not authorized to access the op",
+        "type": "access.denied",
+        "loc": []
+      }
+    ],
+    "ctx": {
+      "body": ""
+    }
+  }
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-pass">
+            <div class="test-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                Get Entity by ID
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/entity/1<br>
+                    Expected Status: 200 | Actual: 200<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (9.92ms):</div>
+                <div class="details">
+                    Status: 200<br>
+                    Body: <pre>{
+  "tags": [
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "site-downtown-tower",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 1,
+      "entity_id": 1,
+      "tag_id": 1
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "Downtown Office Tower",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 2,
+      "entity_id": 1,
+      "tag_id": 2
+    },
+    {
+      "value_n": null,
+      "value_b": true,
+      "value_s": null,
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 3,
+      "entity_id": 1,
+      "tag_id": 3
+    },
+    {
+      "value_n": 150000,
+      "value_b": null,
+      "value_s": null,
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 4,
+      "entity_id": 1,
+      "tag_id": 4
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "ft\u00b2",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 5,
+      "entity_id": 1,
+      "tag_id": 5
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "123 Business St, Metro City, State 12345",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 6,
+      "entity_id": 1,
+      "tag_id": 6
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "America/New_York",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 7,
+      "entity_id": 1,
+      "tag_id": 7
+    },
+    {
+      "value_n": 2018,
+      "value_b": null,
+      "value_s": null,
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 8,
+      "entity_id": 1,
+      "tag_id": 8
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "office",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 9,
+      "entity_id": 1,
+      "tag_id": 9
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "commercial",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 10,
+      "entity_id": 1,
+      "tag_id": 10
+    },
+    {
+      "value_n": null,
+      "value_b": null,
+      "value_s": "weather-metro-city",
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 11,
+      "entity_id": 1,
+      "tag_id": 11
+    },
+    {
+      "value_n": 12,
+      "value_b": null,
+      "value_s": null,
+      "value_ts": null,
+      "value_list": null,
+      "value_dict": null,
+      "value_ref": null,
+      "value_enum": null,
+      "id": 12,
+      "entity_id": 1,
+      "tag_id": 12
+    }
+  ],
+  "id": 1
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-pass">
+            <div class="test-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                List Tag Definitions
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/tagdef<br>
+                    Expected Status: 200 | Actual: 200<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (9.03ms):</div>
+                <div class="details">
+                    Status: 200<br>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-pass">
+            <div class="test-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                Get Tag Definition by ID
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/tagdef/temp<br>
+                    Expected Status: 200 | Actual: 200<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (8.29ms):</div>
+                <div class="details">
+                    Status: 200<br>
+                    Body: <pre>{
+  "name": "temp",
+  "url": null,
+  "doc": null,
+  "dis": null,
+  "file_ext": null,
+  "mime": null,
+  "version": null,
+  "min_val": null,
+  "max_val": null,
+  "base_uri": null,
+  "pref_unit": null,
+  "id": 47
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="test test-fail">
+            <div class="test-header">
+                <span class="badge badge-fail">FAIL</span>
+                <span class="badge badge-auth">NO_AUTH</span>
+                Get Values for Entity
+            </div>
+
+            <div class="request">
+                <div class="label">Request:</div>
+                <div class="details">
+                    <strong>GET</strong> http://localhost:8000/value/1<br>
+                    Expected Status: 200 | Actual: 403<br>
+                </div>
+            </div>
+
+            <div class="response">
+                <div class="label">Response (7.90ms):</div>
+                <div class="details">
+                    Status: 403<br>
+                    Body: <pre>{
+  "detail": "not authorized"
+}</pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

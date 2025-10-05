@@ -7,7 +7,7 @@ import logging
 from app.model.sqlalchemy import values_tables
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.inspection import inspect
-from app.model.sqlalchemy import test_values
+from app.model.sqlalchemy import dynamic_value_tables
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ def add_value(db: Session, value: value_schema.ValueBaseCreate):
         if not test_table:
             table = values_tables.value_tables[value.org_id]
         else:
-            table = test_values.tables["value"]
+            table = dynamic_value_tables.tables["value"]
         #if entity_tag_service.isEntityVirtualPoint(db, value.entity_id):
         #    table = values_tables.value_virtual_point_tables[value.org_id]
         db_value = {
@@ -42,7 +42,7 @@ def add_value(db: Session, value: value_schema.ValueBaseCreate):
             }
 
     else:
-        logger.error("table for org {} not found. Value in the database is {}".format(value.org_id, org_value_table))
+        logger.error("table for org {} not found. Available tables: {}".format(value.org_id, list(values_tables.value_tables.keys())))
         raise exception_service.AccessDeniedException(
             exception_service.DtoExceptionObject(
                 [exception_service.Detail(msg="the client is not authorized to access the op", type="access.denied",
@@ -84,7 +84,7 @@ def add_bulk_value(db: Session, values: value_schema.ValueBulkCreate):
         if not test_table:
             table = values_tables.value_tables[values.org_id]
         else:
-            table = test_values.tables["value"]
+            table = dynamic_value_tables.tables["value"]
         db_values = []
         for val in values.values:
             db_value = {
@@ -147,7 +147,7 @@ def add_bulk_value_current(db: Session, values: value_schema.ValueBulkCreate):
         if not test_table:
             table = values_tables.value_current_tables[values.org_id]
         else:
-            table = test_values.tables["value_current"]
+            table = dynamic_value_tables.tables["value_current"]
         entity_map = {}
 
         for val in values.values:

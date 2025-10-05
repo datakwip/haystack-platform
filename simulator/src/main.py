@@ -77,11 +77,18 @@ def setup_database(db_config: Dict[str, Any]) -> tuple[DatabaseConnection, Schem
         
     # Setup schema
     schema = SchemaSetup(db)
-    org_id = schema.initialize_organization(
+    org_id, org_key = schema.initialize_organization(
         db_config['organization']['name'],
         db_config['organization']['key']
     )
-    console.print(f"[green]OK[/green] Organization setup complete (ID: {org_id})")
+    console.print(f"[green]OK[/green] Organization setup complete (ID: {org_id}, Key: {org_key})")
+
+    # Create test user ONLY for simulator orgs (safety checked)
+    try:
+        test_user_id = schema.initialize_test_user(org_id, org_key, "test@datakwip.local")
+        console.print(f"[green]OK[/green] Test user created (ID: {test_user_id})")
+    except ValueError as e:
+        console.print(f"[yellow]SKIP[/yellow] {str(e)}")
     
     # Setup hypertables
     console.print("[yellow]Setting up TimescaleDB hypertables...[/yellow]")

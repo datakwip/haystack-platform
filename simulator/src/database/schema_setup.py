@@ -9,30 +9,86 @@ logger = logging.getLogger(__name__)
 
 class SchemaSetup:
     """Manages database schema and entity structure."""
-    
+
+    # Safety whitelist - test users only allowed for simulator orgs
+    SIMULATOR_ORG_KEYS = {'docker_test', 'demo', 'test', 'simulator'}
+
     def __init__(self, db_connection):
         """Initialize schema setup with database connection.
-        
+
         Args:
             db_connection: DatabaseConnection instance
         """
         self.db = db_connection
         self.org_id = None
-        
-    def initialize_organization(self, org_name: str = "Demo Building Corp", 
-                              org_key: str = "demo") -> int:
+
+    def initialize_organization(self, org_name: str = "Demo Building Corp",
+                              org_key: str = "demo") -> tuple[int, str]:
         """Initialize organization for the simulation.
-        
+
         Args:
             org_name: Organization name
             org_key: Organization key
-            
+
         Returns:
-            Organization ID
+            Tuple of (organization_id, org_key)
         """
         self.org_id = self.db.create_organization(org_name, org_key)
-        return self.org_id
-        
+        return (self.org_id, org_key)
+
+    def initialize_test_user(self, org_id: int, org_key: str, test_email: str = "test@datakwip.local") -> int:
+        """Create test user for API testing - ONLY for simulator orgs.
+
+        Args:
+            org_id: Organization ID to grant admin access
+            org_key: Organization key to verify it's a simulator org
+            test_email: Test user email
+
+        Returns:
+            User ID
+
+        Raises:
+            ValueError: If org_key is not a simulator org (safety check)
+        """
+        # SAFETY CHECK
+        if org_key.lower() not in self.SIMULATOR_ORG_KEYS:
+            raise ValueError(
+                f"SAFETY: Cannot create test user for org '{org_key}'. "
+                f"Test users only allowed for simulator orgs: {self.SIMULATOR_ORG_KEYS}"
+            )
+
+        logger.info(f"Creating test user for simulator org: {org_key}")
+
+        # Check if user exists
+        query = "SELECT id FROM core.\"user\" WHERE email = %s"
+        result = self.db.execute_query(query, (test_email,))
+
+        if result:
+            user_id = result[0]['id']
+            logger.info(f"Test user already exists: {test_email} (ID: {user_id})")
+        else:
+            # Create user
+            query = "INSERT INTO core.\"user\" (email) VALUES (%s) RETURNING id"
+            with self.db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (test_email,))
+                    user_id = cur.fetchone()[0]
+            logger.info(f"Created test user: {test_email} (ID: {user_id})")
+
+        # Check if org admin exists
+        query = "SELECT id FROM core.org_admin WHERE org_id = %s AND user_id = %s"
+        result = self.db.execute_query(query, (org_id, user_id))
+
+        if not result:
+            # Make user org admin
+            query = "INSERT INTO core.org_admin (org_id, user_id) VALUES (%s, %s)"
+            with self.db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (org_id, user_id))
+            logger.info(f"Granted org admin for user {user_id} on org {org_id}")
+
+        return user_id
+
     def create_entity(self, tags: Dict[str, Any], value_table_id: str = "demo") -> int:
         """Create an entity in the database.
         

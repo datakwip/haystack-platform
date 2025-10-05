@@ -23,7 +23,7 @@ flake8==4.0.1
 pyright==1.1.235
 SQLAlchemy==1.4.35
 sqlalchemy-views==0.3.1
-psycopg2-binary==2.9.3
+psycopg2-binary>=2.9.9
 urllib3==1.26.9
 autopep8==1.6.0
 antlr4-python3-runtime==4.10
@@ -36,6 +36,11 @@ openpyxl
 cryptography==41.0.7
 requests
 
-
+# Testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.1
+faker==20.1.0
 
 
