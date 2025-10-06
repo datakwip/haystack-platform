@@ -91,10 +91,10 @@ def test_bulk_create_values(client, simulator_org, simulator_entities):
 
 @pytest.mark.integration
 def test_get_values_for_invalid_entity(client, simulator_org):
-    """Test GET /value/{entity_id} - Returns error for non-existent entity"""
+    """Test GET /value/{entity_id} - Returns 403 for security (prevents ID enumeration)"""
     response = client.get(
         f"/value/999999?org_id={simulator_org['id']}&limit=10"
     )
 
-    # May return empty list or error depending on implementation
-    assert response.status_code in [200, 400, 404]
+    # Security: Always return 403 to prevent entity ID enumeration attacks
+    assert response.status_code == 403

@@ -18,6 +18,7 @@ from generators.weather import WeatherSimulator
 from generators.schedules import ScheduleGenerator
 from service.state_manager import StateManager
 from service.gap_filler import GapFiller
+from service.haystack_defs_importer import import_haystack_definitions
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,15 @@ class ContinuousDataService:
                     org_key = result[0]['key']
                 else:
                     raise ValueError("Entities exist but no organization found")
+
+            # ========== IMPORT PROJECT HAYSTACK DEFINITIONS ==========
+            # Import official tag definitions if not already present
+            try:
+                import_haystack_definitions(self.data_db, org_id)
+            except Exception as e:
+                logger.error(f"Failed to import Haystack definitions: {e}")
+                # Continue anyway - this is not critical for operation
+            # =========================================================
 
             # ========== ENVIRONMENT-AWARE TEST USER MANAGEMENT ==========
             if dk_env == 'local':

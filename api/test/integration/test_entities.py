@@ -87,9 +87,11 @@ def test_list_entities_pagination(client, simulator_org):
 
 @pytest.mark.integration
 def test_get_entity_not_found(client, simulator_org):
-    """Test GET /entity/{id} - Returns 404 for non-existent entity"""
+    """Test GET /entity/{id} - Returns 403 for security (prevents ID enumeration)"""
     response = client.get(
         f"/entity/999999?org_id={simulator_org['id']}"
     )
 
-    assert response.status_code in [400, 404]
+    # Security: Always return 403 to prevent entity ID enumeration attacks
+    # Returning 404 would reveal which entity IDs exist in the system
+    assert response.status_code == 403
