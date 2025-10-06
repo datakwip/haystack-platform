@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 def get_values_by_object(db: Session, org_id : int, object_id : int, user_id : int, skip: int = 0, limit: int = 100):
     if user_service.is_entity_visible_for_user(db, org_id, user_id, object_id):
-        return value_service.get_all_by_object(db, object_id, skip, limit)
+        return value_service.get_all_by_object(db, org_id, object_id, skip, limit)
 
 
 

@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from app.model.pydantic.filter import value_schema
-from app.model.sqlalchemy import source_object_model
 from app.services.acl import org_service
 from app.services import config_service, exception_service, entity_tag_service
 import logging
@@ -209,16 +208,30 @@ def add_bulk_value_current(db: Session, values: value_schema.ValueBulkCreate):
     #db.bulk_save_objects(db_values)
     return []
 
-def get_all_by_object(db: Session, object_id, skip , limit):
-    results = []
-    result = db.query(source_object_model.Values)\
-        .filter(source_object_model.Values.object_id == object_id)\
-        .offset(skip)\
-        .limit(limit)\
-        .all()
-    if result is not None:
-        return result
-    return results
+def get_all_by_object(db: Session, org_id: int, object_id: int, skip: int, limit: int):
+    """Get all values for a specific entity (object_id) using dynamic org table"""
+    if org_id in values_tables.value_tables:
+        table = values_tables.value_tables[org_id]
+        results = []
+        result = db.query(table)\
+            .filter(table.entity_id == object_id)\
+            .order_by(table.ts.desc())\
+            .offset(skip)\
+            .limit(limit)\
+            .all()
+        if result is not None:
+            return result
+        return results
+    else:
+        raise exception_service.AccessDeniedException(
+            exception_service.DtoExceptionObject(
+                [exception_service.Detail(
+                    msg="the client is not authorized to access the op",
+                    type="access.denied",
+                    loc=[])],
+                exception_service.Ctx("")
+            )
+        )
 
 def get_all_by_objects(db: Session, object_ids: list[int], date_from: str, date_to: str, org_id: int, skip: int , limit: int):
     if org_id in values_tables.value_tables:

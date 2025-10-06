@@ -47,14 +47,14 @@ def test_create_value(client, simulator_org, simulator_entities, db):
     payload = {
         "entity_id": entity_id,
         "org_id": simulator_org["id"],
-        "timestamp": datetime.now().isoformat(),
-        "value": 72.5
+        "ts": datetime.now().isoformat(),
+        "value_n": 72.5
     }
 
     response = client.post("/value", json=payload)
 
     # May succeed or fail depending on entity type and constraints
-    assert response.status_code in [200, 400, 500]
+    assert response.status_code in [200, 400, 403]
 
     # Cleanup if successful (delete from value table)
     if response.status_code == 200:
@@ -72,8 +72,8 @@ def test_bulk_create_values(client, simulator_org, simulator_entities):
     values = [
         {
             "entity_id": entity_id,
-            "timestamp": (now - timedelta(minutes=i * 15)).isoformat(),
-            "value": 70.0 + float(i)
+            "ts": (now - timedelta(minutes=i * 15)).isoformat(),
+            "value_n": 70.0 + float(i)
         }
         for i in range(5)
     ]
@@ -86,7 +86,7 @@ def test_bulk_create_values(client, simulator_org, simulator_entities):
     response = client.post("/bulk/value", json=payload)
 
     # May succeed or fail depending on entity type
-    assert response.status_code in [200, 400, 500]
+    assert response.status_code in [200, 400, 403]
 
 
 @pytest.mark.integration
