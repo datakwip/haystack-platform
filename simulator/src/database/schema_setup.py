@@ -75,6 +75,18 @@ class SchemaSetup:
                     user_id = cur.fetchone()[0]
             logger.info(f"Created test user: {test_email} (ID: {user_id})")
 
+        # Check if org_user exists (required for basic access)
+        query = "SELECT id FROM core.org_user WHERE org_id = %s AND user_id = %s"
+        result = self.db.execute_query(query, (org_id, user_id))
+
+        if not result:
+            # Add user to org
+            query = "INSERT INTO core.org_user (org_id, user_id) VALUES (%s, %s)"
+            with self.db.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (org_id, user_id))
+            logger.info(f"Added user {user_id} to org {org_id}")
+
         # Check if org admin exists
         query = "SELECT id FROM core.org_admin WHERE org_id = %s AND user_id = %s"
         result = self.db.execute_query(query, (org_id, user_id))
@@ -88,6 +100,45 @@ class SchemaSetup:
             logger.info(f"Granted org admin for user {user_id} on org {org_id}")
 
         return user_id
+
+    def delete_test_user(self, test_email: str = "test@datakwip.local") -> None:
+        """Delete test user (production safety).
+
+        Removes test user and all associated permissions.
+        Safe to call even if user doesn't exist.
+
+        Args:
+            test_email: Test user email to delete
+        """
+        logger.info(f"Attempting to delete test user: {test_email}")
+
+        # Get user ID
+        query = "SELECT id FROM core.\"user\" WHERE email = %s"
+        result = self.db.execute_query(query, (test_email,))
+
+        if not result:
+            logger.debug(f"Test user {test_email} does not exist, nothing to delete")
+            return
+
+        user_id = result[0]['id']
+        logger.info(f"Found test user {test_email} (ID: {user_id}), deleting...")
+
+        # Delete in order (respecting foreign keys)
+        with self.db.get_connection() as conn:
+            with conn.cursor() as cur:
+                # 1. Delete org_admin entries
+                cur.execute("DELETE FROM core.org_admin WHERE user_id = %s", (user_id,))
+                deleted_admin = cur.rowcount
+
+                # 2. Delete org_user entries
+                cur.execute("DELETE FROM core.org_user WHERE user_id = %s", (user_id,))
+                deleted_org_user = cur.rowcount
+
+                # 3. Delete user
+                cur.execute("DELETE FROM core.\"user\" WHERE id = %s", (user_id,))
+
+        logger.info(f"Successfully deleted test user: {test_email} "
+                    f"(removed {deleted_admin} admin, {deleted_org_user} org_user entries)")
 
     def create_entity(self, tags: Dict[str, Any], value_table_id: str = "demo") -> int:
         """Create an entity in the database.

@@ -8,7 +8,8 @@ import sys
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-config = jsoncfg.load_config('./config.json')
+config_path = os.getenv('CONFIG_PATH', './config.json')
+config = jsoncfg.load_config(config_path)
 dk_env = os.getenv('dk_env')
 if dk_env is None:
     dk_env = "tigerdata"

@@ -47,7 +47,8 @@ def db(db_engine):
 @pytest.fixture(scope="session")
 def client():
     """FastAPI test client (uses real database, not mocked)"""
-    os.environ['dk_env'] = 'local'  # Use local config with defaultUser
+    os.environ['CONFIG_PATH'] = './test/test_config.json'
+    os.environ['dk_env'] = 'test'  # Use test config with localhost
 
     from app.main import app
     with TestClient(app) as test_client:

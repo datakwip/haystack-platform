@@ -78,31 +78,60 @@ class ContinuousDataService:
             # Initialize state manager with both databases
             self.state_manager = StateManager(self.data_db, self.state_db)
 
+            # Get environment mode
+            import os
+            dk_env = os.getenv('dk_env', 'production').lower()
+            logger.info(f"Running in mode: {dk_env}")
+
             # Check if entities exist
             data_loader = DataLoader(self.data_db, self.value_table)
             entities_exist = data_loader.detect_entities_exist()
 
+            # Initialize schema helper
+            schema = SchemaSetup(self.data_db)
+
+            # Get or create organization
             if not entities_exist:
                 logger.info("No entities found - generating building entities...")
-                schema = SchemaSetup(self.data_db)
                 org_id, org_key = schema.initialize_organization(
                     self.db_config['organization']['name'],
                     self.db_config['organization']['key']
                 )
                 schema.create_value_tables(self.db_config['organization']['key'])
+            else:
+                logger.info("Entities already exist - loading org...")
+                # Get existing org from database
+                query = "SELECT id, key FROM core.org LIMIT 1"
+                result = self.data_db.execute_query(query)
+                if result:
+                    org_id = result[0]['id']
+                    org_key = result[0]['key']
+                else:
+                    raise ValueError("Entities exist but no organization found")
 
-                # Ensure test user exists for simulator org (with safety check)
+            # ========== ENVIRONMENT-AWARE TEST USER MANAGEMENT ==========
+            if dk_env == 'local':
+                # Local mode: Ensure test user exists (idempotent)
                 try:
                     schema.initialize_test_user(org_id, org_key, "test@datakwip.local")
-                    logger.info("Test user verified/created for testing")
+                    logger.info("✓ Test user ensured for local development")
                 except ValueError as e:
                     logger.warning(f"Test user not created: {e}")
+            else:
+                # Production mode: Remove test user if it exists (safety)
+                try:
+                    schema.delete_test_user("test@datakwip.local")
+                    logger.info("✓ Test user removed (production mode)")
+                except Exception as e:
+                    logger.debug(f"No test user to remove: {e}")
+            # ============================================================
 
+            # Continue with entity generation (only if needed)
+            if not entities_exist:
                 entity_gen = EntityGenerator(schema, self.building_config)
                 self.entity_map = entity_gen.generate_all_entities()
                 logger.info(f"Generated {len(self.entity_map)} entities")
             else:
-                logger.info("Entities already exist - loading entity map...")
                 self.entity_map = self._load_entity_map()
                 logger.info(f"Loaded {len(self.entity_map)} entities")
 

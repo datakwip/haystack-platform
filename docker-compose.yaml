@@ -51,7 +51,7 @@ services:
     environment:
       DATABASE_URL: postgresql://datakwip_user:datakwip_password@timescaledb:5432/datakwip
       STATE_DB_URL: postgresql://simulator_user:simulator_password@statedb:5432/simulator_state
-      dk_env: "local"
+      dk_env: ${DK_ENV:-local}
       MAIN_DB_POOL_SIZE: 10
       MAIN_DB_MAX_OVERFLOW: 10
     ports:
@@ -73,6 +73,7 @@ services:
       dockerfile: Dockerfile
     container_name: haystack-simulator
     environment:
+      dk_env: ${DK_ENV:-local}
       API_URL: http://api:8000
       SIMULATOR_ID: 1
       API_KEY: dev-key-local-only
